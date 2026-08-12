@@ -1,0 +1,5 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.1
+chromadb==0.4.22
+# chromadb is OPTIONAL — if install fails, vector memory falls back to a local store
