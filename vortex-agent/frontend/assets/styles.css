@@ -115,27 +115,34 @@ body {
 .nav-meta { color: var(--dim); font-size: 11px; }
 
 .logo {
-  width: 36px; height: 36px; position: relative;
+  width: 40px; height: 40px; position: relative;
   display: grid; place-items: center; flex-shrink: 0;
-}
-.logo-core {
-  width: 11px; height: 11px; border-radius: 50%;
-  background: var(--orange);
-  box-shadow: 0 0 16px var(--orange);
-  animation: pulse 2.4s ease-in-out infinite;
-}
-.logo-ring {
-  position: absolute; inset: 3px;
-  border: 1.5px solid rgba(249,115,22,0.5);
   border-radius: 50%;
-  border-top-color: var(--cyan);
-  animation: spin 6s linear infinite;
+  overflow: hidden;
+  box-shadow:
+    0 0 0 1px rgba(249,115,22,0.35),
+    0 0 18px rgba(249,115,22,0.35);
+  background: #000;
+}
+.logo-img {
+  width: 100%; height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 50%;
+  animation: logoPulse 3.2s ease-in-out infinite;
+}
+@keyframes logoPulse {
+  0%, 100% { transform: scale(1); filter: brightness(1); }
+  50% { transform: scale(1.04); filter: brightness(1.12); }
 }
 @keyframes spin { to { transform: rotate(360deg); } }
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.2); opacity: 0.75; }
 }
+
+/* keep old classes harmless if residual */
+.logo-core, .logo-ring { display: none; }
 
 /* ── main ── */
 .main-col {
@@ -219,9 +226,23 @@ body {
   padding: 22px;
   box-shadow: var(--shadow);
 }
+.hero-brand-row {
+  display: flex; align-items: center; gap: 14px;
+  margin-bottom: 12px;
+}
+.hero-logo {
+  width: 72px; height: 72px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow:
+    0 0 0 1px rgba(249,115,22,0.4),
+    0 0 28px rgba(249,115,22,0.35);
+  background: #000;
+  flex-shrink: 0;
+}
 .hero-kicker {
   font-size: 11px; letter-spacing: 0.14em; text-transform: uppercase;
-  color: var(--orange-2); margin-bottom: 8px;
+  color: var(--orange-2); margin: 0;
 }
 .primary-card h2 {
   font-family: var(--sans);

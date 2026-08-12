@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 
 NAME = "Vortex Agent"
-VERSION = "2.2.0"
+VERSION = "2.2.1"
 TAGLINE = "Autonomous multi-agent OS · Hermes layout · 24-seat council chamber"
 
 # Repo root (this file lives at repository root)
