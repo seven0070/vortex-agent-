@@ -1,0 +1,5 @@
+fastapi==0.110.0
+uvicorn==0.27.1
+pydantic==2.6.1
+# Optional: chromadb for vector memory (falls back to local TF-IDF)
+# chromadb==0.4.22

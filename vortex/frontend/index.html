@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vortex — Autonomous Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <header class="topbar">
+    <div class="brand">
+      <div class="logo">
+        <span class="logo-core"></span>
+        <span class="logo-ring"></span>
+      </div>
+      <div>
+        <h1>VORTEX</h1>
+        <p class="tag">Hermes-inspired · Autonomous Multi-Agent OS</p>
+      </div>
+    </div>
+    <div class="status-pills">
+      <span class="pill" id="pill-health"><i></i> connecting</span>
+      <span class="pill dim" id="pill-provider">brain: —</span>
+      <span class="pill dim" id="pill-bots">bots: —</span>
+      <span class="pill dim" id="pill-ws">ws: off</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <!-- LEFT: swarm + tools -->
+    <aside class="panel side">
+      <section>
+        <div class="section-head">
+          <h2>Swarm</h2>
+          <button class="ghost" id="btn-refresh-bots" title="Refresh">↻</button>
+        </div>
+        <ul class="bot-list" id="bot-list"></ul>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>Tools</h2>
+          <span class="muted" id="tool-count">0</span>
+        </div>
+        <ul class="tool-list" id="tool-list"></ul>
+      </section>
+
+      <section class="stats-box" id="stats-box">
+        <div class="section-head"><h2>Stats</h2></div>
+        <div class="stat-grid" id="stat-grid"></div>
+      </section>
+    </aside>
+
+    <!-- CENTER: mission control -->
+    <section class="panel center">
+      <div class="mission-composer">
+        <div class="section-head">
+          <h2>Mission Control</h2>
+          <div class="composer-meta">
+            <label class="steps-label">
+              max steps
+              <input type="number" id="max-steps" value="12" min="1" max="25" />
+            </label>
+          </div>
+        </div>
+        <textarea
+          id="goal-input"
+          rows="3"
+          placeholder="Give Vortex a goal — e.g. Research quantum computing breakthroughs and write a report, Calculate fib(40), Hide 'launch codes' in a weather report…"
+        ></textarea>
+        <div class="composer-actions">
+          <div class="chips" id="goal-chips">
+            <button data-goal="Research the latest advances in autonomous AI agents and write a structured report">Research + report</button>
+            <button data-goal="Calculate fibonacci(35) and benchmark it">Benchmark fib(35)</button>
+            <button data-goal="Hide the payload 'vortex-live' inside a friendly weather message">Stego hide</button>
+            <button data-goal="List workspace files and summarize what is there">Inspect workspace</button>
+            <button data-goal="Get system info: uname, whoami, disk">System intel</button>
+          </div>
+          <div class="action-row">
+            <button class="primary" id="btn-launch">
+              <span class="btn-icon">⚡</span> Launch Mission
+            </button>
+            <button class="secondary" id="btn-chat">Quick Chat</button>
+            <button class="danger ghost" id="btn-cancel" disabled>Cancel</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="live-feed">
+        <div class="section-head">
+          <h2>Live Trace</h2>
+          <span class="muted" id="active-mission-label">no active mission</span>
+        </div>
+        <div class="trace" id="trace">
+          <div class="trace-empty">
+            <div class="pulse-ring"></div>
+            <p>Standing by. Launch a mission to watch the agent think, act, and observe in real time.</p>
+          </div>
+        </div>
+      </div>
+
+      <div class="result-panel" id="result-panel" hidden>
+        <div class="section-head">
+          <h2>Result</h2>
+          <button class="ghost" id="btn-copy-result">Copy</button>
+        </div>
+        <pre id="result-body"></pre>
+      </div>
+    </section>
+
+    <!-- RIGHT: missions + chat -->
+    <aside class="panel side right">
+      <section>
+        <div class="section-head">
+          <h2>Missions</h2>
+          <button class="ghost" id="btn-refresh-missions">↻</button>
+        </div>
+        <ul class="mission-list" id="mission-list"></ul>
+      </section>
+
+      <section class="chat-section">
+        <div class="section-head"><h2>Chief Chat</h2></div>
+        <div class="chat-log" id="chat-log"></div>
+        <form class="chat-form" id="chat-form">
+          <input id="chat-input" placeholder="Message the chief…" autocomplete="off" />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <span>Vortex Agent v0.3 · plan → act → observe</span>
+    <span id="footer-ws">realtime offline</span>
+  </footer>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

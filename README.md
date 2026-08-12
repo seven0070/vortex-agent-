@@ -1,100 +1,125 @@
 # 🌪️ Vortex Agent
 
-**Autonomous multi-agent OS** — give it a goal, watch it plan → act → observe until the job is done.
+**The autonomous agent that grows with you.**
+
+Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspired autonomous multi-agent OS: a narrow core waist, capability at the edges (tools · skills · swarm), and a closed learning loop.
 
 ```
-you ──► Mission Control UI / CLI / API
-              │
-              ▼
-         Vortex Chief  ──► Autonomous ReAct loop
-              │                    │
-     researcher · architect   tools: search, code,
-     cipher · scout           files, shell, stego…
-              │                    │
-              └──── memory + skills + vector store ────┘
+┌─────────────────────────────────────────────────────────────┐
+│  Entry points                                                │
+│  CLI (vortex/cli) · API Gateway · Mission Control UI         │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  AIAgent  (vortex/agent/run_agent.py)                        │
+│  prompt builder · provider resolution · tool dispatch        │
+│  ReAct loop · context · skills · memory                      │
+└──────────────┬───────────────────────────┬──────────────────┘
+               ▼                           ▼
+     SessionDB + FTS5              Tool Registry (self-registering)
+     Vector + MEMORY.md            toolsets · delegate_task
+     Skill hub (SKILL.md)          web · files · code · shell · crypto
 ```
 
-## Features
+Architecture borrowed from [Nous Research Hermes](https://hermes-agent.nousresearch.com/docs/developer-guide/architecture):
 
-- **Autonomous missions** — goal-driven loop with live thought / tool / observation trace
-- **Swarm of specialist bots** — chief, researcher, architect, cipher, scout
-- **Tool belt** — web search, HTTP fetch, sandboxed Python, calculator, workspace files, restricted shell, steganography, conlang, memory
-- **Brain** — OpenAI / Anthropic when keyed; capable **offline planner** otherwise (no key required)
-- **Persistent memory** — SQLite history + vector recall (Chroma or local TF-IDF fallback)
-- **Live UI** — Mission Control dashboard with WebSocket + SSE streaming
-- **Skills & bugs** — successful multi-step runs become shared skills; tool failures become patterns
+| Hermes concept | Vortex module |
+|----------------|---------------|
+| `AIAgent` / `run_agent.py` | `vortex/agent/run_agent.py` |
+| `tools/registry.py` self-register | `vortex/tools/registry.py` + tool modules |
+| `toolsets.py` | `vortex/toolsets.py` |
+| Skills (`SKILL.md`) | `vortex/skills/**/SKILL.md` + `SkillHub` |
+| Memory provider ABC | `vortex/agent/memory_provider.py` |
+| Session DB + FTS5 | `vortex/agent/state.py` |
+| `delegate_task` subagents | `vortex/tools/delegate_tool.py` |
+| Gateway | `vortex/gateway/api.py` |
+| Prompt tiers | `vortex/agent/prompt_builder.py` |
 
 ## Quick start
 
 ```bash
-cd vortex-agent/backend
-python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
 
-# API + Mission Control UI  (http://localhost:8765)
-python main.py 8765
+# Mission Control UI + API  →  http://localhost:8765
+python run.py 8765
 
-# or interactive CLI
-python cli.py
+# Interactive CLI
+python run.py cli
 ```
 
-### Optional: real LLM
+Legacy shims still work: `python vortex-agent/backend/main.py`.
+
+### Optional real LLM
 
 ```bash
 export OPENAI_API_KEY=sk-...
-# or
-export ANTHROPIC_API_KEY=sk-ant-...
-# or any OpenAI-compatible endpoint
-export VORTEX_API_KEY=...
-export VORTEX_BASE_URL=https://api.example.com/v1
-export VORTEX_MODEL=gpt-4o-mini
+# or ANTHROPIC_API_KEY / VORTEX_API_KEY + VORTEX_BASE_URL
 ```
 
-Without keys the offline planner still runs full multi-step missions (research, code, files, stego, etc.).
+Without keys, the **offline planner** still runs full multi-step missions.
+
+## What it does
+
+- **Autonomous missions** — goal in, plan → act → observe until done
+- **Live trace** — WebSocket + SSE thought/tool/observation stream
+- **Swarm** — chief · researcher · architect · cipher · scout (role toolsets)
+- **Skills** — bundled `SKILL.md` playbooks + auto-learned skills from successful runs
+- **Memory** — SQLite sessions, FTS5 search, vector recall, `MEMORY.md`
+- **Delegation** — `delegate_task` spawns isolated child agents
+- **Tool belt** — web, fetch, code sandbox, calculator, files, shell, stego, conlang, todos…
 
 ## API
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/health` | Liveness + bot/tool counts |
-| `GET` | `/api/meta` | Provider, tools, bots |
-| `POST` | `/api/missions` | `{ "goal": "...", "max_steps": 12 }` → start mission |
-| `GET` | `/api/missions` | List missions |
-| `GET` | `/api/missions/{id}` | Mission detail + steps |
+| `GET` | `/health` | Liveness |
+| `GET` | `/api/meta` | Provider, tools, bots, skills |
+| `POST` | `/api/missions` | `{ "goal", "max_steps", "wait?" }` |
+| `GET` | `/api/missions` | List sessions |
 | `GET` | `/api/missions/{id}/stream` | SSE live trace |
-| `POST` | `/api/missions/{id}/cancel` | Cancel running mission |
-| `POST` | `/api/chat` | Talk to chief (may auto-launch mission) |
-| `GET` | `/api/tools` | Tool catalog |
+| `POST` | `/api/chat` | Chief chat (auto-missions) |
 | `WS` | `/ws` | Realtime event hub |
+| `GET` | `/api/tools` · `/api/skills` | Catalogs |
 
-## CLI cheatsheet
+## CLI
 
 ```
-/auto <goal>     launch autonomous mission with live trace
-/missions        list missions
-/tools           list tools
-@researcher …    address a bot directly
-/bots /spawn /kill /skills /history /stats
+/auto <goal>     launch mission with live trace
+/missions        list
+/tools /skills   catalogs
+@researcher …    address a specialist
+/bots /spawn /kill
+```
+
+## Layout
+
+```
+vortex/
+├── agent/           # AIAgent, prompt, llm, state, skills, memory, OS
+├── tools/           # self-registering tools + registry
+├── toolsets.py      # named presets (core/research/coding/…)
+├── skills/          # bundled SKILL.md playbooks
+├── gateway/         # FastAPI + SSE + WS
+├── cli/             # interactive shell
+├── frontend/        # Mission Control UI
+└── cron/            # extension point
+run.py               # python run.py [port] | python run.py cli
 ```
 
 ## Workspace
 
-Artifacts land in `~/.vortex/workspace/` (reports, plans, code runs).  
-Memory DB: `~/.vortex/memory.db`.
+`~/.vortex/` (override with `VORTEX_HOME`)
 
-## Architecture
-
-| Module | Role |
-|--------|------|
-| `autonomous.py` | Mission runner — ReAct loop, events, cancellation |
-| `llm.py` | Multi-provider brain + offline planner |
-| `tools.py` | Full tool belt (sandboxed) |
-| `swarm.py` | Bots + chief orchestration |
-| `memory.py` / `vector_memory.py` | Persistence + recall |
-| `skills.py` | Shared skills & bug patterns |
-| `main.py` | FastAPI + SSE + WebSocket + static UI |
-| `frontend/` | Mission Control dashboard |
+```
+workspace/   artifacts (reports, plans, code)
+sessions/    reserved
+skills/      user + learned skills
+memory/      MEMORY.md + vectors
+vortex.db    sessions · messages · steps · FTS5
+```
 
 ## License
 
 MIT © 2026 Sanath S Patil
+
+Inspired by [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research) — architecture and design patterns, not a fork of the codebase.
