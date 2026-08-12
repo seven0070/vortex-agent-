@@ -31,6 +31,11 @@ class RSIIntegrationTests(unittest.TestCase):
         cls.memory = Memory()
         cls.agent = VortexAgent(cls.memory)
 
+    @classmethod
+    def tearDownClass(cls):
+        from evolution.workspace import prune_tmp_worktrees
+        prune_tmp_worktrees()
+
     def test_improver_spawned(self):
         names = {b["name"] for b in self.agent.list_bots()}
         self.assertIn("improver", names)

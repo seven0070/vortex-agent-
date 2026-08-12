@@ -12,7 +12,7 @@ class PermissionManager:
             "researcher": {"allow": ["read", "search", "recall", "research", "execute", "translate", "encode", "decode"], "deny": ["write_core", "deploy"]},
             "architect": {"allow": ["read", "write", "code", "execute", "benchmark", "search"], "deny": ["deploy_production"]},
             "cipher": {"allow": ["read", "translate", "encode", "decode", "security_check", "execute", "write", "search"], "deny": ["write_core"]},
-            "improver": {"allow": ["read", "eval", "mutate", "test", "execute", "search"], "deny": ["direct_deploy"]},
+            "improver": {"allow": ["read", "eval", "mutate", "test", "execute", "search", "canary", "promote", "rollback", "patch"], "deny": ["direct_deploy", "overwrite_production"]},
             # legacy planning bots
             "planner": {"allow": ["read", "plan", "search", "execute"], "deny": ["deploy"]},
             "critic": {"allow": ["read", "evaluate", "search", "execute"], "deny": ["deploy"]},

@@ -105,8 +105,8 @@ class ToolRegistry:
             if decision["action"] == "DENY":
                 return ToolResult("error", {}, f"Governance DENY: {decision['reason']}")
             if decision["action"] == "ESCALATE":
-                # for now allow but log
-                pass
+                # escalate is not allow — refuse unattended execution
+                return ToolResult("error", {}, f"Governance ESCALATE: {decision['reason']}")
 
         try:
             result = tool.execute(**kwargs)

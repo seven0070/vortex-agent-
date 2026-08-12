@@ -113,8 +113,8 @@ class VortexBot:
                             result = self._call(tool_name, args)
                     else:
                         result = self._call(tool_name, args)
-                except:
-                    result = self._call(tool_name, args)
+                except Exception as e:
+                    result = ToolResult("error", {}, f"Governance/tool error: {e}")
 
                 if result.status == "error":
                     retry = self.agent.rsi.retry_tool(tool_name, args, result.message)
@@ -187,6 +187,14 @@ class VortexBot:
         learned = self.agent.rsi.suggest_route(message, self.role)
         if learned:
             tool_name, args, meta = learned
+            if self.agent.governance:
+                dec = self.agent.governance.evaluate(
+                    task=f"chief tool:{tool_name}",
+                    context={"tool": tool_name, "args": args, "agent": "chief"},
+                    agent="chief", action="execute",
+                )
+                if dec.get("action") == "DENY":
+                    return f"Governance DENY: {dec.get('reason')}"
             result = self._call(tool_name, args)
             if result.status == "error":
                 retry = self.agent.rsi.retry_tool(tool_name, args, result.message)
@@ -343,7 +351,12 @@ class VortexBot:
         return None
 
     def _role_reply(self, message, ctx):
-        ctx_txt = "\n".join(f"   • {c[:100]}" for c in ctx) if ctx else ""
+        extra = []
+        req = getattr(self.agent, "_request_context", None) or {}
+        for item in (req.get("memories") or [])[:3]:
+            extra.append(str(item.get("text") if isinstance(item, dict) else item)[:120])
+        merged = list(ctx or []) + extra
+        ctx_txt = "\n".join(f"   • {c[:100]}" for c in merged) if merged else ""
         if self.role == "research":
             return (f"🔍 Researcher findings on '{message[:50]}':\n"
                     f"- primary signal detected\n- secondary correlation noted\n"
@@ -402,6 +415,9 @@ class VortexAgent:
         self.bugs = BugLibrary()
         self.bots = {}
         self.rsi = RapidSelfImprovement(self)
+        self.pipeline = None
+        self.last_pipeline = None
+        self._request_context = None
 
         # ── new layers (import lazily to avoid circular) ──
         self.governance = None
@@ -416,6 +432,8 @@ class VortexAgent:
         try:
             from governance import Governance
             self.governance = Governance(memory=self.memory)
+            if getattr(self.rsi, "evolution", None):
+                self.rsi.evolution.governance = self.governance
         except Exception as e:
             print(f"[agent] governance not loaded: {e}")
 
@@ -482,6 +500,12 @@ class VortexAgent:
             if name not in self.bots:
                 self.spawn_bot(name, role, quiet=True)
 
+        try:
+            from pipeline import RequestPipeline
+            self.pipeline = RequestPipeline(self)
+        except Exception as e:
+            print(f"[agent] pipeline not loaded: {e}")
+
     def spawn_bot(self, name, role="general", quiet=False):
         self.bots[name] = VortexBot(self, name, role)
         self.memory.log_event("spawn", name)
@@ -502,22 +526,15 @@ class VortexAgent:
 
     def chat(self, message):
         self.memory.save_message("user", message)
-        # observability trace start
-        trace_id = None
+        if self.pipeline:
+            reply = self.pipeline.handle(message)
+        else:
+            reply = self.bots["chief"].handle(message)
+
         if self.observability:
             try:
-                trace_id = self.observability.tracer.start_trace(goal=message, generation_id=self.memory.current_generation())
-            except:
-                pass
-
-        reply = self.bots["chief"].handle(message)
-
-        # observability finish
-        if self.observability and trace_id:
-            try:
-                self.observability.tracer.finish_trace(trace_id, final_outcome=reply[:200], score=0.7)
                 self.observability.metrics.inc("chat_total")
-            except:
+            except Exception:
                 pass
 
         # sovereign lifecycle awareness

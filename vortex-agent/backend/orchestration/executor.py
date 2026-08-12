@@ -94,7 +94,17 @@ class Executor:
             state.trace(WorkflowPhase.EXECUTE, f"task {task.id} failed: {e}", {"error": str(e)})
 
     def _run_task_logic(self, task: TaskNode, state: VortexState) -> Any:
-        """Core execution: delegate to agent/bot or direct tool."""
+        """Core execution: delegate to agent/bot or direct tool. Governance cannot be skipped."""
+        gov = getattr(self.agent, "governance", None) if self.agent else None
+        if gov and (task.tool or task.goal):
+            dec = gov.evaluate(
+                task=task.goal,
+                context={"tool": task.tool, "args": task.args, "task_id": task.id},
+                agent=task.assigned_to or "chief",
+                action="execute",
+            )
+            if dec.get("action") == "DENY":
+                raise RuntimeError(f"Governance DENY: {dec.get('reason')}")
         # if agent exists and has bots
         if self.agent and task.assigned_to and task.assigned_to.lower() != "chief":
             # try to find bot by role or name

@@ -25,8 +25,13 @@ class Planner:
             except Exception as e:
                 state.trace(WorkflowPhase.UNDERSTAND, f"memory recall failed: {e}")
 
-        # identify intent patterns
+        # identify intent patterns — memory can override when past success is clear
         intent = self._classify_intent(goal)
+        memory_intent = self._intent_from_memory(goal, ctx)
+        if memory_intent:
+            state.metadata["intent_from_memory"] = memory_intent
+            if intent == "general":
+                intent = memory_intent
         state.metadata["intent"] = intent
         state.metadata["memory_context"] = ctx
         state.trace(WorkflowPhase.UNDERSTAND, f"classified intent={intent}", {"intent": intent, "memories": len(state.memories_used)})
@@ -71,6 +76,16 @@ class Planner:
         return state
 
     # ----- helpers -----
+    def _intent_from_memory(self, goal: str, ctx: Dict[str, Any]) -> Optional[str]:
+        blob = str(ctx.get("relevant_memories") or "").lower() + " " + str(ctx.get("agent_shared_knowledge") or "").lower()
+        if not blob.strip():
+            return None
+        if any(k in blob for k in ("codeforge", "fibonacci", "calculate")) and any(k in goal.lower() for k in ("fib", "calc", "code", "number")):
+            return "code"
+        if "steganography" in blob and any(k in goal.lower() for k in ("hide", "secret", "payload")):
+            return "secure"
+        return None
+
     def _classify_intent(self, text: str) -> str:
         low = text.lower()
         # multi-step indicators

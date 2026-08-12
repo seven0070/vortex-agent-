@@ -80,7 +80,8 @@ class PolicyEngine:
             Policy(name="deny_drop_table", description="Block DB destructive", condition="deny:drop table", action="DENY", priority=100),
             Policy(name="protect_core", description="Protect core files", condition="protected_file", action="ESCALATE", priority=90),
             Policy(name="escalate_code_mod", description="Code modification needs approval", condition="escalate:modify orchestrator", action="ESCALATE", priority=80),
-            Policy(name="escalate_self_improve", description="Self-improve deploy escalates", condition="escalate:self-improvement", action="ESCALATE", priority=80),
+            Policy(name="deny_production_overwrite", description="Never overwrite production from evolution", condition="deny:overwrite production", action="DENY", priority=110),
+            Policy(name="escalate_self_improve", description="Ungated self-improve deploy escalates", condition="escalate:self-improvement", action="ESCALATE", priority=80),
             Policy(name="allow_research", description="Research is generally allowed", condition="research", action="ALLOW", priority=10),
             Policy(name="default_allow", description="Default allow", condition="always", action="ALLOW", priority=1),
         ]

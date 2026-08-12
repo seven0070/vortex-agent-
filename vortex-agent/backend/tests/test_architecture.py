@@ -12,6 +12,11 @@ class ArchitectureTests(unittest.TestCase):
         cls.memory = Memory()
         cls.agent = VortexAgent(cls.memory)
 
+    @classmethod
+    def tearDownClass(cls):
+        from evolution.workspace import prune_tmp_worktrees
+        prune_tmp_worktrees()
+
     def test_memory_layers(self):
         m = self.memory
         # working memory
@@ -130,6 +135,20 @@ class ArchitectureTests(unittest.TestCase):
         self.assertIn("traces", obs)
         weaknesses = evo.find_weaknesses()
         self.assertTrue(isinstance(weaknesses, list))
+        rec = evo.evolve_once()
+        self.assertIn(rec.get("decision"), ("promoted", "rejected", "canary_failed", "reject"))
+        self.assertNotIn("sandbox tests passed (mock)", str(rec.get("sandbox_result")))
+        if rec.get("decision") == "promoted":
+            from self_improve import compile_math
+            self.assertIn("+ 5", compile_math("what is 15 times 3 plus 5") or "")
+
+    def test_pipeline_is_wired(self):
+        self.assertIsNotNone(self.agent.pipeline)
+        self.agent.chat("who are you")
+        self.assertTrue(self.agent.last_pipeline)
+        layers = self.agent.last_pipeline.get("layers") or []
+        self.assertIn("sovereign", layers)
+        self.assertIn("governance", layers)
 
 if __name__ == "__main__":
     unittest.main()

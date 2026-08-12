@@ -1,6 +1,6 @@
-# Vortex Agent — Full Architecture 0.4.0
+# Vortex Agent — 1.0
 
-A local swarm agent with **rapid self-improvement + Ultron-style evolution** — it rescues a miss in the same turn, stores the lesson in a **knowledge graph + vector memory**, and only keeps mutations that raise a frozen eval score.
+A local swarm agent with **real self-improvement** — not a mock loop. Vortex finds a weakness, writes an isolated candidate overlay, runs real sandbox tests, benchmarks against last-known-good, canaries, and only then promotes. If canary or monitor fails, it rolls back. Production source is never overwritten.
 
 ```
 observe → rescue → reflect → mutate → eval → promote (or revert)
@@ -143,7 +143,7 @@ tools/
 ├── shell/ (exec sandboxed)
 ├── github/ (status)
 ├── database/ (query memory.db SELECT)
-├── web/ (search mock + fetch)
+├── web/ (local knowledge search + fetch)
 ├── code/ (analyze/test + codeforge)
 ├── communication/ (translate/hide)
 └── external/ (mcp.list)
@@ -152,15 +152,40 @@ tools/
 `ToolRegistry` + governance check before execution.
 Backward compat: `from tools import TOOL_CLASSES` still works (loads package).
 
-### 8. Self-Improvement Evolution Engine (OpenHands-style)
+### 8. Self-Improvement Evolution Engine v1 (real, not simulated)
 
-`backend/self_improve.py` now two layers:
-- **RapidSelfImprovement** (existing): observe→rescue→reflect→mutate→eval→promote per turn
-- **EvolutionEngine** (new):
+`backend/evolution/` is the authoritative engine. `self_improve.py` keeps the per-turn RSI loop and delegates generation changes here.
+
 ```
-Observe → Find weakness → Hypothesis → Candidate → Modify → Sandbox → Regression Tests → Benchmarks → Security Analysis → Compare Baseline ↙↘ (worse->reject, better->stage->canary->deploy->monitor->rollback)
+Weakness → Hypothesis → Isolated git worktree → Actual code patch
+  → Real tests → Vortex benchmark vs last-known-good
+  → Council (views only) → Resolution (selects) → Security → Governance
+  → Canary → Monitor → promote or automatic rollback
 ```
-- Versioned candidates in `~/.vortex/releases/v001/` with `candidate.json`, `evolution_record.json` containing generation_id, parent_generation, change_set, benchmark_results, security_results, performance_results, decision.
+
+What is real now:
+
+1. **Candidate workspace** — `git worktree add` onto `evolution/vNNN-…` under the release dir (fallback: isolated copy).
+2. **Actual patch** — edits `DEFAULT_OVERLAY` in the worktree `compiler.py` and writes `patches/source.diff`. Production `backend/*.py` is never touched.
+3. **Isolated sandbox** — `python -I harness.py` plus worktree `unittest tests.test_rsi.CompilerTests`. Mock string `"sandbox tests passed (mock)"` is treated as failure.
+3. **Regression benchmark** — golden tasks in `tests/fixtures/golden_tasks.json`. Capability tests (chained arithmetic, power) are earned, not assumed.
+4. **Canary** — activates the candidate overlay, runs canary tasks vs last-known-good, restores on failure.
+5. **Rollback** — `LAST_KNOWN_GOOD` pointer is never deleted. Later `v00N` directories stay on disk.
+
+Promotion policy (all must pass — `new_score >= baseline - 0.001` is not enough):
+
+```
+quality       ↑   (or hold only if another dimension improved)
+reliability   not ↓
+security      pass
+latency       not ↑ beyond 1.25×
+cost          not ↑ beyond 1.25×
+regressions   = 0
+canary        pass
+governance    ALLOW
+```
+
+Demo improvement: baseline cannot compile `15 times 3 plus 5` (yields 45). A promoted overlay enables chained arithmetic and yields 50.
 
 ### 9. Evaluation — Vortex Benchmark
 
@@ -270,13 +295,16 @@ vortex-agent/backend/
   sovereign/ identity.py objectives.py state.py priorities.py lifecycle.py
   tools/ base.py legacy.py registry.py filesystem/ browser/ shell/ github/ database/ web/ code/ communication/ external/
   observability/ tracer.py metrics.py
-  self_improve.py (RSI + EvolutionEngine)
+  self_improve.py (per-turn RSI; imports EvolutionEngine)
+  evolution/  overlay, patcher, sandbox, canary, rollback, promotion, engine
+  pipeline.py (Interface→Sovereign→Governance→…→Self-Improvement)
   evals.py (Vortex Benchmark)
   swarm.py (VortexAgent + Council integration)
-  main.py (FastAPI 0.4.0)
+  main.py (FastAPI 1.0.0)
   cli.py
   static/index.html (full architecture dashboard)
-  tests/test_rsi.py + test_architecture.py
+  tests/test_rsi.py + test_architecture.py + test_evolution.py
+  tests/unit/  tests/integration/  tests/security_gates/  tests/benchmark/  tests/evolution_loop/
 ```
 
 ## Implementation order completed
@@ -288,7 +316,7 @@ vortex-agent/backend/
 5. Governance → OPA-style ✅
 6. Sovereign → built ✅
 7. Tool ecosystem → MCP ✅
-8. Self-improvement → OpenHands-style coding agent + evolution ✅
+8. Self-improvement → Evolution Engine v1 (real patch/sandbox/canary/rollback) ✅
 9. Evaluation → Vortex Benchmark ✅
 10. Observability → OpenTelemetry-inspired ✅
 11. Security/sandboxing ✅

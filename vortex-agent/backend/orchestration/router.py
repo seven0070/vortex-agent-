@@ -73,17 +73,32 @@ class Router:
         if any(k in goal_low for k in ("critic", "review", "evaluate")):
             return "Critic", "critic keyword"
 
-        # memory-based: if task similar to previous success with certain agent, reuse
-        if self.memory and hasattr(self.memory, 'recall'):
+        # memory-based: past successful traces and recalled facts change the route
+        if self.memory:
             try:
-                rec = self.memory.recall(task.goal, n=3)
-                # if episodic mentions agent
+                traces = self.memory.get_traces(30) if hasattr(self.memory, "get_traces") else []
+                goal_toks = set(goal_low.split())
+                scores = {}
+                for tr in traces:
+                    if tr.get("status") != "success" or not tr.get("tool"):
+                        continue
+                    overlap = len(goal_toks & set(str(tr.get("task", "")).lower().split()))
+                    if overlap:
+                        key = TOOL_MAP.get(tr["tool"], tr.get("bot") or "Engineer")
+                        scores[key] = scores.get(key, 0) + overlap * float(tr.get("score") or 0.5)
+                if scores:
+                    winner = max(scores, key=scores.get)
+                    return winner, f"memory traces → {winner}"
+                rec = self.memory.recall(task.goal, n=3) if hasattr(self.memory, "recall") else []
                 for r in rec:
+                    text = str(r).lower()
+                    if "codeforge" in text:
+                        return "Engineer", "memory fact → Engineer"
                     if r.get("type") == "agent_memory":
                         agent = r.get("agent")
                         if agent:
                             return agent, "memory recall"
-            except:
+            except Exception:
                 pass
 
         # default: Researcher for researchish, Engineer for general

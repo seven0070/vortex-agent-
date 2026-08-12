@@ -15,9 +15,12 @@ class ApprovalManager:
         # high risk always requires approval
         if risk_score > 0.6:
             return True
-        # code modification
-        if any(k in low for k in ("modify", "overwrite", "deploy", "self-improvement", "evolution", "promote", "release")):
+        # production overwrites always require approval
+        if any(k in low for k in ("overwrite production", "direct_deploy", "modify orchestrator")):
             return True
+        # gated isolated overlay promote does not need a human if caller already passed gates
+        if "self-improvement" in low or "evolution" in low or "promote" in low or "release" in low:
+            return risk_score > 0.55
         # file writes to protected
         if "protected_file" in low or "orchestrator.py" in low:
             return True
