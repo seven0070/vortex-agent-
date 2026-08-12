@@ -1,56 +1,105 @@
-/* Vortex Agent — Mission Control frontend */
+/* Vortex Agent — Mission Control App */
 (() => {
-  const $ = (sel) => document.querySelector(sel);
-  const $$ = (sel) => [...document.querySelectorAll(sel)];
+  const $ = (s, el = document) => el.querySelector(s);
+  const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 
   const state = {
-    activeMissionId: null,
-    ws: null,
-    wsRetries: 0,
+    view: "home",
+    meta: null,
     bots: [],
     tools: [],
-    missions: [],
     seats: [],
-    mode: "mission", // mission | council
+    missions: [],
+    councils: [],
+    ws: null,
+    wsRetries: 0,
+    activeId: null,
+    mode: null, // mission | council
   };
-
-  // ── boot ──────────────────────────────────────────────────────────────
-  async function boot() {
-    await Promise.all([refreshMeta(), refreshMissions(), refreshStats()]);
-    connectWs();
-    bindUi();
-  }
 
   async function api(path, opts = {}) {
     const res = await fetch(path, {
       headers: { "Content-Type": "application/json", ...(opts.headers || {}) },
       ...opts,
     });
-    if (!res.ok) {
-      const text = await res.text();
-      throw new Error(text || res.statusText);
-    }
+    if (!res.ok) throw new Error((await res.text()) || res.statusText);
     const ct = res.headers.get("content-type") || "";
-    if (ct.includes("application/json")) return res.json();
-    return res.text();
+    return ct.includes("application/json") ? res.json() : res.text();
   }
 
-  // ── data loads ────────────────────────────────────────────────────────
+  function esc(s) {
+    return String(s ?? "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  // ── navigation ──────────────────────────────────────────────────────────
+  const TITLES = {
+    home: ["Home", "Autonomous multi-agent OS · council chamber"],
+    chat: ["Chat", "Talk to the chief · auto-routes complex goals"],
+    missions: ["Missions", "Solo autonomous runs · live trace"],
+    council: ["Council", "24 seats · vote · chamber workers"],
+    seats: ["Seats", "Council personas + swarm bots"],
+    tools: ["Tools", "Self-registering tool belt"],
+    workspace: ["Workspace", "Artifacts under ~/.vortex/workspace"],
+    settings: ["Settings", "Runtime identity and configuration"],
+  };
+
+  function showView(name) {
+    state.view = name;
+    $$(".view").forEach((v) => v.classList.toggle("active", v.id === `view-${name}`));
+    $$(".nav-item").forEach((b) =>
+      b.classList.toggle("active", b.dataset.view === name)
+    );
+    const [t, tag] = TITLES[name] || [name, ""];
+    $("#view-title").textContent = t;
+    $("#view-tag").textContent = tag;
+    if (name === "missions") refreshMissions();
+    if (name === "council") refreshCouncils();
+    if (name === "workspace") refreshWorkspace();
+    if (name === "settings") renderSettings();
+  }
+
+  // ── boot ────────────────────────────────────────────────────────────────
+  async function boot() {
+    bindNav();
+    bindHome();
+    bindChat();
+    bindMissions();
+    bindCouncil();
+    await refreshMeta();
+    await Promise.all([refreshMissions(), refreshCouncils(), refreshStats()]);
+    connectWs();
+  }
+
+  function bindNav() {
+    $$(".nav-item").forEach((btn) =>
+      btn.addEventListener("click", () => showView(btn.dataset.view))
+    );
+    $$("[data-goto]").forEach((btn) =>
+      btn.addEventListener("click", () => showView(btn.dataset.goto))
+    );
+  }
+
   async function refreshMeta() {
     try {
-      const [health, meta] = await Promise.all([
-        api("/health"),
-        api("/api/meta"),
-      ]);
-      setPill("pill-health", "ok", `online · v${health.version || "0.3"}`);
-      setPill("pill-provider", "dim", `brain: ${meta.provider || "offline"}`);
-      setPill("pill-bots", "dim", `bots: ${meta.bots?.length ?? health.bots}`);
+      const [health, meta] = await Promise.all([api("/health"), api("/api/meta")]);
+      state.meta = meta;
       state.bots = meta.bots || [];
       state.tools = meta.tools || [];
       state.seats = meta.council_seats || [];
+      setPill("pill-health", "ok", `online · v${health.version || meta.version}`);
+      setPill("pill-provider", "dim", `brain: ${meta.provider || "offline"}`);
+      setPill("pill-bots", "dim", `bots: ${(meta.bots || []).length}`);
+      setPill("pill-seats", "dim", `seats: ${(meta.council_seats || []).length}`);
+      $("#nav-version").textContent = `v${meta.version || "—"}`;
       renderBots();
-      renderSeats();
       renderTools();
+      renderSeats();
+      renderHomeSeats();
+      renderSettings();
     } catch (e) {
       setPill("pill-health", "bad", "offline");
       console.warn(e);
@@ -60,26 +109,18 @@
   async function refreshStats() {
     try {
       const s = await api("/api/stats");
-      const grid = $("#stat-grid");
       const items = [
         ["Messages", s.messages ?? 0],
-        ["Tool calls", s.tool_calls ?? 0],
-        ["Missions", s.missions ?? 0],
-        ["Tools", s.tools ?? 0],
+        ["Sessions", s.sessions ?? s.missions ?? 0],
+        ["Steps", s.steps ?? s.tool_calls ?? 0],
+        ["Tools", s.tools ?? state.tools.length],
       ];
-      grid.innerHTML = items
+      $("#home-stats").innerHTML = items
         .map(
           ([k, v]) =>
-            `<div class="stat"><div class="k">${k}</div><div class="v">${v}</div></div>`
+            `<div class="stat"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`
         )
         .join("");
-    } catch (_) {}
-  }
-
-  async function refreshMissions() {
-    try {
-      state.missions = await api("/api/missions");
-      renderMissions();
     } catch (_) {}
   }
 
@@ -87,50 +128,26 @@
     const el = $("#" + id);
     if (!el) return;
     el.className = "pill " + (cls === "dim" ? "dim" : cls);
-    const dot = cls === "dim" ? "" : "<i></i>";
-    el.innerHTML = `${dot}${text}`;
+    el.innerHTML = (cls === "dim" ? "" : "<i></i>") + text;
   }
 
-  // ── renderers ─────────────────────────────────────────────────────────
-  const BOT_ICON = {
-    orchestrator: "🧠",
-    research: "🔍",
-    coding: "🏗️",
-    security: "🔒",
-    scout: "🛰️",
-    general: "🤖",
-  };
-
+  // ── renderers ───────────────────────────────────────────────────────────
   function renderBots() {
-    const ul = $("#bot-list");
-    ul.innerHTML = state.bots
+    const icons = {
+      orchestrator: "🧠",
+      research: "🔍",
+      coding: "🏗️",
+      security: "🔒",
+      scout: "🛰️",
+    };
+    $("#bot-list").innerHTML = state.bots
       .map(
         (b) => `
-      <li data-bot="${esc(b.name)}">
-        <div class="bot-avatar">${BOT_ICON[b.role] || "🤖"}</div>
+      <li>
+        <div class="bot-avatar">${icons[b.role] || "🤖"}</div>
         <div class="bot-meta">
           <div class="name">${esc(b.name)}</div>
-          <div class="role">${esc(b.role)} · ${b.messages || 0} msgs</div>
-        </div>
-      </li>`
-      )
-      .join("");
-  }
-
-  function renderSeats() {
-    const ul = $("#seat-list");
-    if (!ul) return;
-    $("#seat-count").textContent = String(state.seats.length);
-    ul.innerHTML = state.seats
-      .map(
-        (s) => `
-      <li title="${esc(s.mandate || "")}">
-        <div class="bot-avatar" style="background:linear-gradient(135deg,${esc(
-          s.color || "#f97316"
-        )}44,rgba(34,211,238,0.12))">${esc(s.icon || "◆")}</div>
-        <div class="bot-meta">
-          <div class="name">${esc(s.name)}</div>
-          <div class="role">${esc(s.project || s.title)} · w=${esc(s.weight)}</div>
+          <div class="role">${esc(b.role)} · ${esc(b.toolset || "")} · ${b.messages || 0} msgs</div>
         </div>
       </li>`
       )
@@ -150,42 +167,131 @@
       .join("");
   }
 
-  function renderMissions() {
-    const ul = $("#mission-list");
-    if (!state.missions.length) {
-      ul.innerHTML = `<li class="muted" style="border:none;background:transparent">No missions yet</li>`;
+  function seatCard(s) {
+    return `
+      <div class="seat-card" title="${esc(s.mandate || "")}">
+        <div class="top">
+          <div class="bot-avatar" style="background:linear-gradient(135deg,${esc(
+            s.color || "#f97316"
+          )}55,rgba(34,211,238,0.12))">${esc(s.icon || "◆")}</div>
+          <div>
+            <div class="name">${esc(s.name)}</div>
+            <div class="project">${esc(s.project || s.title || "")}</div>
+          </div>
+        </div>
+        <div class="mandate">${esc((s.mandate || "").slice(0, 120))}</div>
+      </div>`;
+  }
+
+  function renderSeats() {
+    $("#seat-count").textContent = String(state.seats.length);
+    $("#seat-grid").innerHTML = state.seats.map(seatCard).join("");
+  }
+
+  function renderHomeSeats() {
+    $("#home-seats").innerHTML = state.seats.slice(0, 8).map(seatCard).join("");
+  }
+
+  function renderSettings() {
+    const m = state.meta || {};
+    const rows = [
+      ["Product", m.name || "Vortex Agent"],
+      ["Version", m.version || "—"],
+      ["Brain", m.provider || "offline"],
+      ["Model", m.model || "offline-planner"],
+      ["Architecture", m.architecture || "—"],
+      ["Chamber", m.chamber ? "enabled" : "off"],
+      ["Workspace", m.workspace || "~/.vortex/workspace"],
+      ["Seats", String((m.council_seats || state.seats).length)],
+      ["Tools", String((m.tools || state.tools).length)],
+      ["Bots", String((m.bots || state.bots).length)],
+    ];
+    $("#settings-grid").innerHTML = rows
+      .map(
+        ([k, v]) =>
+          `<div class="row"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div></div>`
+      )
+      .join("");
+  }
+
+  function renderMissionList(el, items, onClick) {
+    if (!items.length) {
+      el.innerHTML = `<li class="muted" style="border:none;background:transparent">None yet</li>`;
       return;
     }
-    ul.innerHTML = state.missions
-      .slice(0, 20)
+    el.innerHTML = items
+      .slice(0, 25)
       .map((m) => {
-        const active = m.id === state.activeMissionId ? "active" : "";
+        const active = m.id === state.activeId ? "active" : "";
         return `
-        <li class="${active}" data-mid="${esc(m.id)}">
+        <li class="${active}" data-id="${esc(m.id)}">
           <div class="mission-meta" style="width:100%">
             <div style="display:flex;justify-content:space-between;gap:8px;align-items:center">
               <div class="name">${esc(m.id)}</div>
               <span class="badge ${esc(m.status)}">${esc(m.status)}</span>
             </div>
-            <div class="sub">${esc((m.goal || "").slice(0, 70))}</div>
-            <div class="sub">${m.step_count || 0} steps</div>
+            <div class="sub">${esc((m.goal || m.title || "").slice(0, 80))}</div>
+            <div class="sub">${m.step_count || m.opinion_count || 0} steps/opinions</div>
           </div>
         </li>`;
       })
       .join("");
-
-    ul.querySelectorAll("li[data-mid]").forEach((li) => {
-      li.addEventListener("click", () => loadMission(li.dataset.mid));
-    });
+    el.querySelectorAll("li[data-id]").forEach((li) =>
+      li.addEventListener("click", () => onClick(li.dataset.id))
+    );
   }
 
-  // ── websocket ─────────────────────────────────────────────────────────
+  async function refreshMissions() {
+    try {
+      state.missions = await api("/api/missions");
+      renderMissionList($("#mission-list"), state.missions, loadMission);
+      renderMissionList($("#home-missions"), state.missions, (id) => {
+        showView("missions");
+        loadMission(id);
+      });
+    } catch (_) {}
+  }
+
+  async function refreshCouncils() {
+    try {
+      state.councils = await api("/api/council");
+      renderMissionList($("#council-list"), state.councils, loadCouncil);
+    } catch (_) {}
+  }
+
+  async function refreshWorkspace() {
+    const m = state.meta || {};
+    $("#workspace-path").textContent = m.workspace || "~/.vortex/workspace";
+    // best-effort: list recent council finals from mission/council APIs
+    const lines = [];
+    lines.push("Workspace root: " + (m.workspace || "~/.vortex/workspace"));
+    lines.push("");
+    lines.push("Recent council sessions:");
+    for (const c of (state.councils || []).slice(0, 8)) {
+      const ex = c.execution || c.chamber || {};
+      lines.push(
+        `• ${c.id} [${c.status}] ${ex.final_path || ex.chamber_dir || c.goal || ""}`.slice(
+          0,
+          120
+        )
+      );
+    }
+    lines.push("");
+    lines.push("Recent missions:");
+    for (const x of (state.missions || []).slice(0, 8)) {
+      lines.push(`• ${x.id} [${x.status}] ${(x.goal || "").slice(0, 60)}`);
+    }
+    lines.push("");
+    lines.push("Tip: open council/<id>/FINAL.md on the host for full verdicts.");
+    $("#workspace-body").textContent = lines.join("\n");
+  }
+
+  // ── websocket ───────────────────────────────────────────────────────────
   function connectWs() {
     const proto = location.protocol === "https:" ? "wss" : "ws";
-    const url = `${proto}://${location.host}/ws`;
     try {
-      state.ws = new WebSocket(url);
-    } catch (e) {
+      state.ws = new WebSocket(`${proto}://${location.host}/ws`);
+    } catch (_) {
       scheduleReconnect();
       return;
     }
@@ -214,425 +320,355 @@
   }
 
   function handleEvent(ev) {
-    if (!ev || !ev.type) return;
-    if (ev.type === "hello" || ev.type === "pong" || ev.type === "ping") return;
-
-    // only render events for active mission (or if none selected, adopt it)
-    const mid = ev.mission_id;
-    if (mid && !state.activeMissionId) {
-      state.activeMissionId = mid;
-      $("#active-mission-label").textContent = mid;
-      $("#btn-cancel").disabled = false;
+    if (!ev || !ev.type || ["hello", "ping", "pong"].includes(ev.type)) return;
+    const mid = ev.mission_id || ev.session_id || ev.council_id;
+    if (mid && !state.activeId) {
+      state.activeId = mid;
+      state.mode = String(ev.type).includes("council") || String(ev.type).includes("chamber")
+        ? "council"
+        : "mission";
     }
-    if (mid && state.activeMissionId && mid !== state.activeMissionId) {
-      // still refresh mission list on terminal events
-      if (String(ev.type).startsWith("mission_")) refreshMissions();
+    if (mid && state.activeId && mid !== state.activeId) {
+      if (String(ev.type).startsWith("mission_") || String(ev.type).startsWith("council_")) {
+        refreshMissions();
+        refreshCouncils();
+      }
       return;
     }
 
-    switch (ev.type) {
-      case "mission_queued":
-      case "mission_started":
-      case "council_queued":
-      case "council_started":
-        clearTraceEmpty();
+    // home mini status
+    if (["thought", "tool_call", "chamber_dispatch", "council_round"].includes(ev.type)) {
+      $("#home-status").textContent =
+        ev.thought ||
+        ev.message ||
+        `${ev.type}${ev.tool ? ": " + ev.tool : ""}${ev.round ? " · " + ev.round : ""}`;
+      pushMini(
+        ev.thought ||
+          ev.message ||
+          `${ev.type} ${ev.tool || ev.seat_name || ev.round || ""}`
+      );
+    }
+
+    const traceId =
+      state.mode === "council" ? "council-trace" : "trace";
+    paintEvent(ev, traceId);
+
+    if (["mission_completed", "council_completed"].includes(ev.type)) {
+      if (ev.result) {
+        if (state.mode === "council") showCouncilResult(ev.result);
+        else showResult(ev.result);
+      }
+      $("#btn-cancel").disabled = true;
+      $("#btn-council-cancel").disabled = true;
+      $("#btn-launch").disabled = false;
+      $("#btn-launch-council").disabled = false;
+      $("#btn-council").disabled = false;
+      $("#btn-home-solo").disabled = false;
+      $("#btn-home-council").disabled = false;
+      refreshMissions();
+      refreshCouncils();
+      refreshStats();
+    }
+    if (["mission_failed", "council_failed", "mission_cancelled", "council_cancelled"].includes(ev.type)) {
+      $("#btn-cancel").disabled = true;
+      $("#btn-council-cancel").disabled = true;
+      $("#btn-launch").disabled = false;
+      $("#btn-launch-council").disabled = false;
+      $("#btn-council").disabled = false;
+      refreshMissions();
+      refreshCouncils();
+    }
+    if (ev.type === "council_consensus" && ev.tally) {
+      const bar = $("#tally-bar");
+      bar.hidden = false;
+      bar.innerHTML = Object.entries(ev.tally)
+        .map(
+          ([k, v]) =>
+            `<span class="chip ${esc(k)}">${esc(k)}: ${esc(
+              typeof v === "number" ? v.toFixed(1) : v
+            )}</span>`
+        )
+        .join("");
+    }
+  }
+
+  function pushMini(text) {
+    const box = $("#home-trace");
+    const div = document.createElement("div");
+    div.className = "line";
+    div.textContent = String(text || "").slice(0, 140);
+    box.prepend(div);
+    while (box.children.length > 8) box.lastChild.remove();
+  }
+
+  function paintEvent(ev, traceId) {
+    const map = {
+      mission_queued: () =>
+        appendStep(traceId, "system", "0", `Queued: ${ev.goal || ""}`),
+      mission_started: () =>
+        appendStep(traceId, "system", "0", `Started: ${ev.goal || ""}`),
+      council_queued: () =>
+        appendStep(traceId, "system", "0", `Council queued: ${ev.goal || ""}`),
+      council_started: () =>
+        appendStep(traceId, "system", "0", `Council seated`),
+      council_round: () =>
         appendStep(
-          "system",
-          "0",
-          `${ev.type.includes("council") ? "Council" : "Mission"} ${ev.type
-            .replace("mission_", "")
-            .replace("council_", "")}: ${ev.goal || mid}`
-        );
-        $("#btn-cancel").disabled = false;
-        break;
-      case "council_round":
-        clearTraceEmpty();
-        appendStep(
+          traceId,
           "system",
           ev.round || "·",
-          `Council round: ${ev.round || "?"} — ${ev.message || ""}`
-        );
-        break;
-      case "council_opinion":
-        clearTraceEmpty();
+          `Round: ${ev.round} — ${ev.message || ""}`
+        ),
+      council_opinion: () =>
         appendStep(
+          traceId,
           "thought",
           ev.step || "·",
           `${ev.seat_name || ev.seat}${ev.project ? " · " + ev.project : ""} · ${ev.round}: ${ev.summary || ""}`,
-          ev.stance ? `stance=${ev.stance}${ev.vote ? " vote=" + ev.vote : ""}` : ""
-        );
-        break;
-      case "council_consensus":
-        clearTraceEmpty();
+          ev.stance
+            ? `stance=${ev.stance}${ev.vote ? " vote=" + ev.vote : ""}`
+            : ""
+        ),
+      council_consensus: () =>
         appendStep(
+          traceId,
           "done",
           "⚖",
           `Consensus: ${(ev.winner || "").toUpperCase()}`,
           ev.tally ? JSON.stringify(ev.tally) : ""
-        );
-        break;
-      case "council_executing":
-        appendStep("tool", "⚡", "Chamber + chief executing directive");
-        break;
-      case "chamber_dispatch":
-        clearTraceEmpty();
+        ),
+      council_executing: () =>
+        appendStep(traceId, "tool", "⚡", "Chamber + chief executing"),
+      chamber_dispatch: () =>
         appendStep(
+          traceId,
           "system",
           "⚡",
-          ev.message || "Dispatching seat workers",
+          ev.message || "Dispatching workers",
           (ev.workers || []).map((w) => w.name || w.seat).join(", ")
-        );
-        break;
-      case "chamber_worker_start":
+        ),
+      chamber_worker_start: () =>
         appendStep(
+          traceId,
           "tool",
           "⚙",
-          `${ev.seat_name || ev.seat} worker started`,
-          (ev.sub_goal || "").slice(0, 120)
-        );
-        break;
-      case "chamber_worker_done":
+          `${ev.seat_name || ev.seat} started`,
+          (ev.sub_goal || "").slice(0, 100)
+        ),
+      chamber_worker_done: () =>
         appendStep(
+          traceId,
           ev.status === "completed" ? "obs" : "obs err",
           "✓",
           `${ev.seat_name || ev.seat}: ${ev.status}` +
-            (ev.artifact ? ` · ${ev.artifact}` : ""),
-          ev.steps != null ? `${ev.steps} steps` : ""
-        );
-        break;
-      case "chamber_merge":
-        appendStep("system", "📎", ev.message || "Chief merging chamber outputs");
-        break;
-      case "council_completed":
-        if (ev.result) showResult(ev.result);
-        break;
-      case "thinking":
-        // soft indicator — skip noisy duplicates
-        break;
-      case "thought":
-        clearTraceEmpty();
+            (ev.artifact ? ` · ${ev.artifact}` : "")
+        ),
+      chamber_merge: () =>
+        appendStep(traceId, "system", "📎", ev.message || "Merging outputs"),
+      thought: () =>
         appendStep(
+          traceId,
           "thought",
-          ev.step,
+          ev.step || "·",
           ev.thought || "(planning)",
-          ev.action ? `next: ${ev.action}` : ""
-        );
-        break;
-      case "tool_call":
-        clearTraceEmpty();
+          ev.action ? `→ ${ev.action}` : ""
+        ),
+      tool_call: () =>
         appendStep(
+          traceId,
           "tool",
-          ev.step,
+          ev.step || "·",
           `🔧 ${ev.tool}`,
-          ev.args ? JSON.stringify(ev.args, null, 0) : ""
-        );
-        break;
-      case "observation":
-        clearTraceEmpty();
+          ev.args ? JSON.stringify(ev.args) : ""
+        ),
+      observation: () =>
         appendStep(
+          traceId,
           ev.status === "success" ? "obs" : "obs err",
-          ev.step,
-          ev.observation || "",
-          ""
-        );
-        break;
-      case "mission_completed":
-        appendStep("done", "✓", "Mission completed", `${ev.steps || "?"} steps`);
-        showResult(ev.result || "");
-        $("#btn-cancel").disabled = true;
-        $("#btn-launch").disabled = false;
-        if ($("#btn-council")) $("#btn-council").disabled = false;
-        refreshMissions();
-        refreshStats();
-        break;
-      case "mission_failed":
-        appendStep("obs err", "✗", `Failed: ${ev.error || "unknown"}`);
-        $("#btn-cancel").disabled = true;
-        $("#btn-launch").disabled = false;
-        if ($("#btn-council")) $("#btn-council").disabled = false;
-        refreshMissions();
-        break;
-      case "mission_cancelled":
-        appendStep("system", "–", "Mission cancelled");
-        $("#btn-cancel").disabled = true;
-        $("#btn-launch").disabled = false;
-        if ($("#btn-council")) $("#btn-council").disabled = false;
-        refreshMissions();
-        break;
-      default:
-        break;
+          ev.step || "·",
+          ev.observation || ""
+        ),
+      mission_completed: () =>
+        appendStep(traceId, "done", "✓", "Mission completed"),
+      council_completed: () =>
+        appendStep(traceId, "done", "⚖", "Council completed"),
+      mission_failed: () =>
+        appendStep(traceId, "obs err", "✗", `Failed: ${ev.error || ""}`),
+      mission_cancelled: () =>
+        appendStep(traceId, "system", "–", "Cancelled"),
+    };
+    if (map[ev.type]) {
+      clearTraceEmpty(traceId);
+      map[ev.type]();
     }
   }
 
-  function clearTraceEmpty() {
-    const empty = $("#trace .trace-empty");
+  function clearTraceEmpty(id) {
+    const empty = $(`#${id} .trace-empty`);
     if (empty) empty.remove();
   }
 
-  function appendStep(kind, idx, body, args) {
-    const trace = $("#trace");
+  function resetTrace(id) {
+    $(`#${id}`).innerHTML = "";
+  }
+
+  function appendStep(traceId, kind, idx, body, args) {
+    const trace = $("#" + traceId);
+    if (!trace) return;
     const el = document.createElement("div");
     el.className = "step";
-    const kindClass = kind.startsWith("obs")
-      ? kind
-      : kind;
+    const base = kind.replace(" err", "");
     el.innerHTML = `
       <div class="idx">#${esc(String(idx))}</div>
       <div>
-        <span class="kind ${esc(kindClass.split(" ")[0])}${
-      kind.includes("err") ? " err" : ""
-    }">${esc(kind.replace(" err", ""))}</span>
+        <span class="kind ${esc(base)}${kind.includes("err") ? " err" : ""}">${esc(
+      base
+    )}</span>
         <div class="body">${esc(body)}${
       args ? `<div class="args">${esc(args)}</div>` : ""
     }</div>
       </div>`;
-    // fix err class on kind span
-    if (kind.includes("err")) {
-      el.querySelector(".kind").classList.add("err");
-    }
-    if (kind === "done") {
-      el.querySelector(".kind").className = "kind done";
-    }
+    if (kind === "done") el.querySelector(".kind").className = "kind done";
+    if (kind.includes("err")) el.querySelector(".kind").classList.add("err");
     trace.appendChild(el);
     trace.scrollTop = trace.scrollHeight;
-  }
-
-  function resetTrace() {
-    $("#trace").innerHTML = "";
-    $("#result-panel").hidden = true;
-    $("#result-body").textContent = "";
   }
 
   function showResult(text) {
     $("#result-panel").hidden = false;
     $("#result-body").textContent = text || "(empty)";
   }
+  function showCouncilResult(text) {
+    $("#council-result-panel").hidden = false;
+    $("#council-result-body").textContent = text || "(empty)";
+  }
 
-  // ── actions ───────────────────────────────────────────────────────────
-  function bindUi() {
-    $("#btn-launch").addEventListener("click", launchMission);
-    const btnCouncil = $("#btn-council");
-    if (btnCouncil) btnCouncil.addEventListener("click", launchCouncil);
-    $("#btn-chat").addEventListener("click", () => {
-      const g = $("#goal-input").value.trim();
-      if (g) sendChat(g);
-      else $("#chat-input").focus();
+  // ── home ────────────────────────────────────────────────────────────────
+  function bindHome() {
+    $("#home-chips").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-goal]");
+      if (b) $("#home-goal").value = b.dataset.goal;
     });
-    $("#btn-cancel").addEventListener("click", cancelMission);
-    $("#btn-refresh-bots").addEventListener("click", refreshMeta);
-    $("#btn-refresh-missions").addEventListener("click", refreshMissions);
-    $("#btn-copy-result").addEventListener("click", async () => {
-      const t = $("#result-body").textContent;
-      try {
-        await navigator.clipboard.writeText(t);
-        $("#btn-copy-result").textContent = "Copied";
-        setTimeout(() => ($("#btn-copy-result").textContent = "Copy"), 1200);
-      } catch (_) {}
+    $("#btn-home-chat").addEventListener("click", () => showView("chat"));
+    $("#btn-home-solo").addEventListener("click", () => {
+      const g = $("#home-goal").value.trim();
+      if (!g) return $("#home-goal").focus();
+      $("#mission-goal").value = g;
+      showView("missions");
+      launchMission();
     });
+    $("#btn-home-council").addEventListener("click", () => {
+      const g = $("#home-goal").value.trim();
+      if (!g) return $("#home-goal").focus();
+      $("#council-goal").value = g;
+      showView("council");
+      launchCouncil();
+    });
+  }
 
-    $$("#goal-chips button").forEach((btn) => {
-      btn.addEventListener("click", () => {
-        $("#goal-input").value = btn.dataset.goal || btn.textContent;
-        $("#goal-input").focus();
-      });
-    });
-
-    $("#chat-form").addEventListener("submit", (e) => {
+  // ── chat ────────────────────────────────────────────────────────────────
+  function bindChat() {
+    $("#chat-form").addEventListener("submit", async (e) => {
       e.preventDefault();
       const v = $("#chat-input").value.trim();
       if (!v) return;
       $("#chat-input").value = "";
-      sendChat(v);
+      await sendChat(v);
     });
-
-    $("#goal-input").addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) {
-        e.preventDefault();
-        launchMission();
-      }
+    $("#chat-chips").addEventListener("click", (e) => {
+      const b = e.target.closest("button[data-msg]");
+      if (b) sendChat(b.dataset.msg);
     });
   }
 
-  async function launchMission() {
-    const goal = $("#goal-input").value.trim();
-    if (!goal) {
-      $("#goal-input").focus();
-      return;
+  async function sendChat(message) {
+    const log = $("#chat-log");
+    const empty = log.querySelector(".chat-empty");
+    if (empty) empty.remove();
+    const user = document.createElement("div");
+    user.className = "bubble user";
+    user.textContent = message;
+    log.appendChild(user);
+    const pending = document.createElement("div");
+    pending.className = "bubble bot";
+    pending.textContent = "…";
+    log.appendChild(pending);
+    log.scrollTop = log.scrollHeight;
+    try {
+      const res = await api("/api/chat", {
+        method: "POST",
+        body: JSON.stringify({ message }),
+      });
+      pending.textContent = res.response || "(empty)";
+      refreshMissions();
+      refreshCouncils();
+      refreshStats();
+    } catch (e) {
+      pending.textContent = "Error: " + e.message;
     }
+    log.scrollTop = log.scrollHeight;
+  }
+
+  // ── missions ────────────────────────────────────────────────────────────
+  function bindMissions() {
+    $("#btn-launch").addEventListener("click", launchMission);
+    $("#btn-launch-council").addEventListener("click", () => {
+      const g = $("#mission-goal").value.trim();
+      if (!g) return $("#mission-goal").focus();
+      $("#council-goal").value = g;
+      showView("council");
+      launchCouncil();
+    });
+    $("#btn-cancel").addEventListener("click", cancelActive);
+    $("#btn-refresh-missions").addEventListener("click", refreshMissions);
+    $("#btn-copy-result").addEventListener("click", () =>
+      copyText($("#result-body").textContent, $("#btn-copy-result"))
+    );
+  }
+
+  async function launchMission() {
+    const goal = $("#mission-goal").value.trim();
+    if (!goal) return $("#mission-goal").focus();
     const maxSteps = Number($("#max-steps").value) || 12;
     state.mode = "mission";
-    resetTrace();
-    clearTraceEmpty();
-    appendStep("system", "…", "Launching solo mission…", goal.slice(0, 120));
-    $("#btn-launch").disabled = true;
-    if ($("#btn-council")) $("#btn-council").disabled = true;
-    $("#btn-cancel").disabled = false;
+    state.activeId = null;
+    resetTrace("trace");
+    clearTraceEmpty("trace");
     $("#result-panel").hidden = true;
-
+    $("#btn-launch").disabled = true;
+    $("#btn-cancel").disabled = false;
+    $("#home-status").textContent = "Launching solo mission…";
+    appendStep("trace", "system", "…", "Launching solo mission…", goal.slice(0, 100));
     try {
       const mission = await api("/api/missions", {
         method: "POST",
         body: JSON.stringify({ goal, max_steps: maxSteps, wait: false }),
       });
-      state.activeMissionId = mission.id;
+      state.activeId = mission.id;
       $("#active-mission-label").textContent = `${mission.id} · running`;
-      appendStep("system", "0", `Queued ${mission.id}`, `provider: ${mission.provider}`);
-      followSse(mission.id);
+      appendStep("trace", "system", "0", `Queued ${mission.id}`);
+      followMission(mission.id);
       refreshMissions();
     } catch (e) {
-      appendStep("obs err", "!", `Failed to launch: ${e.message}`);
+      appendStep("trace", "obs err", "!", e.message);
       $("#btn-launch").disabled = false;
-      if ($("#btn-council")) $("#btn-council").disabled = false;
       $("#btn-cancel").disabled = true;
     }
   }
 
-  async function launchCouncil() {
-    const goal = $("#goal-input").value.trim();
-    if (!goal) {
-      $("#goal-input").focus();
-      return;
-    }
-    state.mode = "council";
-    resetTrace();
-    clearTraceEmpty();
-    appendStep("system", "…", "Convening Agent Council…", goal.slice(0, 120));
-    $("#btn-launch").disabled = true;
-    if ($("#btn-council")) $("#btn-council").disabled = true;
-    $("#btn-cancel").disabled = false;
-    $("#result-panel").hidden = true;
-
-    try {
-      const session = await api("/api/council", {
-        method: "POST",
-        body: JSON.stringify({ goal, auto_execute: true, wait: false }),
-      });
-      state.activeMissionId = session.id;
-      $("#active-mission-label").textContent = `council ${session.id} · deliberating`;
-      appendStep(
-        "system",
-        "0",
-        `Council ${session.id} seated`,
-        (session.seats || []).join(", ")
-      );
-      followCouncil(session.id);
-      refreshMissions();
-    } catch (e) {
-      appendStep("obs err", "!", `Failed to convene: ${e.message}`);
-      $("#btn-launch").disabled = false;
-      if ($("#btn-council")) $("#btn-council").disabled = false;
-      $("#btn-cancel").disabled = true;
-    }
-  }
-
-  function followCouncil(cid) {
-    // poll council endpoint (WS also streams council_* events)
-    let n = 0;
-    const tick = async () => {
-      n += 1;
-      try {
-        const s = await api(`/api/council/${cid}`);
-        if (!s) return;
-        if (["completed", "failed", "cancelled"].includes(s.status)) {
-          if (s.directive) {
-            appendStep(
-              "done",
-              "⚖",
-              `Decision: ${(s.directive.decision || "").toUpperCase()}`,
-              s.tally ? JSON.stringify(s.tally) : ""
-            );
-          }
-          const ex = s.execution || {};
-          const body =
-            ex.result ||
-            (s.directive && s.directive.summary) ||
-            s.consensus ||
-            "";
-          if (body) showResult(formatCouncilResult(s));
-          $("#btn-launch").disabled = false;
-          if ($("#btn-council")) $("#btn-council").disabled = false;
-          $("#btn-cancel").disabled = true;
-          $("#active-mission-label").textContent = `council ${cid} · ${s.status}`;
-          refreshMissions();
-          refreshStats();
-          return;
-        }
-      } catch (_) {}
-      if (n < 120) setTimeout(tick, 500);
-    };
-    setTimeout(tick, 400);
-  }
-
-  function formatCouncilResult(s) {
-    const d = s.directive || {};
-    const ex = s.execution || {};
-    const lines = [
-      `# ⚖ Vortex Agent Council — Verdict`,
-      `**Goal:** ${s.goal || ""}`,
-      `**Decision:** ${(d.decision || s.status || "").toUpperCase()}`,
-      `**Tally:** ${JSON.stringify(s.tally || {})}`,
-      "",
-      "## Seated projects",
-      ...(s.members || []).map(
-        (m) => `- **${m.name || m.id}** — ${m.project || ""}${m.url ? " · " + m.url : ""}`
-      ),
-      "",
-      "## Consensus",
-      d.summary || s.consensus || "—",
-      "",
-      "## Action plan",
-      ...(d.actions || []).map((a, i) => `${i + 1}. ${a}`),
-    ];
-    if ((d.risks || []).length) {
-      lines.push("", "## Risks", ...d.risks.map((r) => `- ⚠ ${r}`));
-    }
-    if ((s.dissent || []).length) {
-      lines.push("", "## Dissent", ...s.dissent.map((x) => `- ${x}`));
-    }
-    lines.push(
-      "",
-      "## Execution",
-      `Status: ${ex.status || "n/a"} · mission=${ex.mission_id || "—"}`,
-      "",
-      ex.result || ex.error || ""
-    );
-    return lines.join("\n");
-  }
-
-  function followSse(mid) {
-    // SSE complements WS — useful behind proxies that buffer WS oddly
+  function followMission(mid) {
     try {
       const es = new EventSource(`/api/missions/${mid}/stream`);
       es.onmessage = (ev) => {
         try {
           const data = JSON.parse(ev.data);
           if (data.type === "snapshot" && data.mission) {
-            // hydrate any steps we missed
             const m = data.mission;
-            if (m.status === "completed" && m.result) {
-              // don't double-render if WS already did
-            }
             if (["completed", "failed", "cancelled"].includes(m.status)) {
               if (m.result) showResult(m.result);
               if (m.error) showResult(m.error);
               $("#btn-launch").disabled = false;
               $("#btn-cancel").disabled = true;
               $("#active-mission-label").textContent = `${mid} · ${m.status}`;
-              // paint steps if trace is nearly empty
-              const steps = m.steps || [];
-              if ($("#trace").children.length < 3 && steps.length) {
-                resetTrace();
-                steps.forEach((s) => {
-                  if (s.thought)
-                    appendStep("thought", s.index, s.thought, `action: ${s.action}`);
-                  appendStep(
-                    s.status === "success" ? "obs" : "obs err",
-                    s.index,
-                    `${s.action}: ${s.observation || ""}`
-                  );
-                });
-                if (m.result) showResult(m.result);
-              }
               es.close();
               refreshMissions();
               refreshStats();
@@ -643,60 +679,37 @@
               ["mission_completed", "mission_failed", "mission_cancelled"].includes(
                 data.type
               )
-            ) {
+            )
               es.close();
-            }
           }
         } catch (_) {}
       };
-      es.onerror = () => {
-        // let it retry natively a bit; close after terminal is handled elsewhere
-      };
     } catch (_) {}
-  }
-
-  async function cancelMission() {
-    if (!state.activeMissionId) return;
-    try {
-      if (state.mode === "council") {
-        await api(`/api/council/${state.activeMissionId}/cancel`, {
-          method: "POST",
-        });
-      } else {
-        await api(`/api/missions/${state.activeMissionId}/cancel`, {
-          method: "POST",
-        });
-      }
-      if (state.ws && state.ws.readyState === 1) {
-        state.ws.send(
-          JSON.stringify({ type: "cancel", mission_id: state.activeMissionId })
-        );
-      }
-    } catch (e) {
-      appendStep("obs err", "!", `Cancel failed: ${e.message}`);
-    }
   }
 
   async function loadMission(mid) {
     try {
       const m = await api(`/api/missions/${mid}`);
-      state.activeMissionId = mid;
+      state.activeId = mid;
+      state.mode = "mission";
       $("#active-mission-label").textContent = `${mid} · ${m.status}`;
-      resetTrace();
-      clearTraceEmpty();
+      resetTrace("trace");
+      clearTraceEmpty("trace");
       (m.steps || []).forEach((s) => {
         if (s.thought)
-          appendStep("thought", s.index, s.thought, `→ ${s.action}`);
-        if (s.action === "finish") {
-          appendStep("done", s.index, s.observation || "done");
-        } else {
+          appendStep("trace", "thought", s.index, s.thought, `→ ${s.action}`);
+        if (s.action === "finish")
+          appendStep("trace", "done", s.index, s.observation || "done");
+        else {
           appendStep(
-            s.status === "success" ? "tool" : "obs err",
+            "trace",
+            "tool",
             s.index,
             `🔧 ${s.action}`,
             JSON.stringify(s.args || {})
           );
           appendStep(
+            "trace",
             s.status === "success" ? "obs" : "obs err",
             s.index,
             s.observation || ""
@@ -705,47 +718,212 @@
       });
       if (m.result) showResult(m.result);
       if (m.error) showResult(m.error);
-      $("#btn-cancel").disabled = m.status !== "running";
-      $("#btn-launch").disabled = m.status === "running";
-      renderMissions();
+      renderMissionList($("#mission-list"), state.missions, loadMission);
     } catch (e) {
       console.warn(e);
     }
   }
 
-  async function sendChat(message) {
-    const log = $("#chat-log");
-    const user = document.createElement("div");
-    user.className = "bubble user";
-    user.textContent = message;
-    log.appendChild(user);
-    log.scrollTop = log.scrollHeight;
-
-    const pending = document.createElement("div");
-    pending.className = "bubble bot";
-    pending.textContent = "…";
-    log.appendChild(pending);
-
-    try {
-      const res = await api("/api/chat", {
-        method: "POST",
-        body: JSON.stringify({ message }),
-      });
-      pending.textContent = res.response || "(empty)";
-      refreshStats();
-      refreshMissions();
-    } catch (e) {
-      pending.textContent = "Error: " + e.message;
-    }
-    log.scrollTop = log.scrollHeight;
+  // ── council ─────────────────────────────────────────────────────────────
+  function bindCouncil() {
+    $("#btn-council").addEventListener("click", launchCouncil);
+    $("#btn-council-cancel").addEventListener("click", cancelActive);
+    $("#btn-refresh-council").addEventListener("click", refreshCouncils);
+    $("#btn-copy-council").addEventListener("click", () =>
+      copyText($("#council-result-body").textContent, $("#btn-copy-council"))
+    );
   }
 
-  function esc(s) {
-    return String(s ?? "")
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;")
-      .replace(/"/g, "&quot;");
+  async function launchCouncil() {
+    const goal = $("#council-goal").value.trim();
+    if (!goal) return $("#council-goal").focus();
+    state.mode = "council";
+    state.activeId = null;
+    resetTrace("council-trace");
+    clearTraceEmpty("council-trace");
+    $("#council-result-panel").hidden = true;
+    $("#tally-bar").hidden = true;
+    $("#btn-council").disabled = true;
+    $("#btn-home-council").disabled = true;
+    $("#btn-council-cancel").disabled = false;
+    $("#home-status").textContent = "Convening council…";
+    appendStep("council-trace", "system", "…", "Convening Agent Council…", goal.slice(0, 100));
+    try {
+      const session = await api("/api/council", {
+        method: "POST",
+        body: JSON.stringify({
+          goal,
+          auto_execute: true,
+          wait: false,
+          use_chamber: $("#use-chamber").checked,
+        }),
+      });
+      state.activeId = session.id;
+      $("#council-active-label").textContent = `${session.id} · deliberating`;
+      appendStep(
+        "council-trace",
+        "system",
+        "0",
+        `Council ${session.id}`,
+        (session.seats || []).slice(0, 12).join(", ")
+      );
+      pollCouncil(session.id);
+      refreshCouncils();
+    } catch (e) {
+      appendStep("council-trace", "obs err", "!", e.message);
+      $("#btn-council").disabled = false;
+      $("#btn-home-council").disabled = false;
+      $("#btn-council-cancel").disabled = true;
+    }
+  }
+
+  function pollCouncil(cid) {
+    let n = 0;
+    const tick = async () => {
+      n += 1;
+      try {
+        const s = await api(`/api/council/${cid}`);
+        if (["completed", "failed", "cancelled"].includes(s.status)) {
+          $("#council-active-label").textContent = `${cid} · ${s.status}`;
+          if (s.tally) {
+            const bar = $("#tally-bar");
+            bar.hidden = false;
+            bar.innerHTML = Object.entries(s.tally)
+              .map(
+                ([k, v]) =>
+                  `<span class="chip ${esc(k)}">${esc(k)}: ${esc(
+                    typeof v === "number" ? v.toFixed(1) : v
+                  )}</span>`
+              )
+              .join("");
+          }
+          showCouncilResult(formatCouncil(s));
+          // hydrate sparse trace
+          if ($("#council-trace").children.length < 4 && (s.opinions || []).length) {
+            resetTrace("council-trace");
+            clearTraceEmpty("council-trace");
+            (s.opinions || []).forEach((o, i) => {
+              appendStep(
+                "council-trace",
+                "thought",
+                i + 1,
+                `${o.seat_name} · ${o.round}: ${o.summary}`,
+                o.stance
+              );
+            });
+          }
+          $("#btn-council").disabled = false;
+          $("#btn-home-council").disabled = false;
+          $("#btn-council-cancel").disabled = true;
+          refreshCouncils();
+          refreshStats();
+          return;
+        }
+      } catch (_) {}
+      if (n < 180) setTimeout(tick, 600);
+    };
+    setTimeout(tick, 500);
+  }
+
+  function formatCouncil(s) {
+    const d = s.directive || {};
+    const ex = s.execution || {};
+    const lines = [
+      `# ⚖ Vortex Agent Council`,
+      `**Goal:** ${s.goal || ""}`,
+      `**Decision:** ${(d.decision || s.status || "").toUpperCase()}`,
+      `**Tally:** ${JSON.stringify(s.tally || {})}`,
+      "",
+      "## Members",
+      ...(s.members || []).map(
+        (m) => `- ${m.name || m.id} — ${m.project || ""}`
+      ),
+      "",
+      "## Consensus",
+      d.summary || s.consensus || "—",
+      "",
+      "## Plan",
+      ...(d.actions || []).map((a, i) => `${i + 1}. ${a}`),
+    ];
+    if ((d.risks || []).length)
+      lines.push("", "## Risks", ...d.risks.map((r) => `- ⚠ ${r}`));
+    if ((s.dissent || []).length)
+      lines.push("", "## Dissent", ...s.dissent.map((x) => `- ${x}`));
+    lines.push(
+      "",
+      "## Execution",
+      `mode=${ex.mode || "—"} workers=${ex.worker_count ?? "—"} status=${ex.status || "—"}`,
+      ex.final_path ? `final: ${ex.final_path}` : "",
+      "",
+      ex.result || ex.summary || ex.error || ""
+    );
+    return lines.filter(Boolean).join("\n");
+  }
+
+  async function loadCouncil(cid) {
+    try {
+      const s = await api(`/api/council/${cid}`);
+      state.activeId = cid;
+      state.mode = "council";
+      $("#council-active-label").textContent = `${cid} · ${s.status}`;
+      resetTrace("council-trace");
+      clearTraceEmpty("council-trace");
+      (s.opinions || []).forEach((o, i) => {
+        appendStep(
+          "council-trace",
+          "thought",
+          i + 1,
+          `${o.seat_name} · ${o.round}: ${o.summary}`,
+          [o.stance, o.vote].filter(Boolean).join(" ")
+        );
+      });
+      if (s.tally) {
+        const bar = $("#tally-bar");
+        bar.hidden = false;
+        bar.innerHTML = Object.entries(s.tally)
+          .map(
+            ([k, v]) =>
+              `<span class="chip ${esc(k)}">${esc(k)}: ${esc(
+                typeof v === "number" ? v.toFixed(1) : v
+              )}</span>`
+          )
+          .join("");
+      }
+      showCouncilResult(formatCouncil(s));
+      renderMissionList($("#council-list"), state.councils, loadCouncil);
+    } catch (e) {
+      console.warn(e);
+    }
+  }
+
+  async function cancelActive() {
+    if (!state.activeId) return;
+    try {
+      if (state.mode === "council")
+        await api(`/api/council/${state.activeId}/cancel`, { method: "POST" });
+      else
+        await api(`/api/missions/${state.activeId}/cancel`, { method: "POST" });
+      if (state.ws && state.ws.readyState === 1)
+        state.ws.send(
+          JSON.stringify({ type: "cancel", mission_id: state.activeId })
+        );
+    } catch (e) {
+      appendStep(
+        state.mode === "council" ? "council-trace" : "trace",
+        "obs err",
+        "!",
+        e.message
+      );
+    }
+  }
+
+  async function copyText(t, btn) {
+    try {
+      await navigator.clipboard.writeText(t || "");
+      const old = btn.textContent;
+      btn.textContent = "Copied";
+      setTimeout(() => (btn.textContent = old), 1200);
+    } catch (_) {}
   }
 
   boot();
