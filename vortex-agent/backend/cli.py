@@ -6,7 +6,7 @@ def main():
     memory = Memory()
     agent = VortexAgent(memory)
 
-    print("\n🌪️  VORTEX AGENT — Phase 5 (Evolution Engine v1)")
+    print("\n🌪️  VORTEX AGENT — 1.0")
     print("   Bots:", ", ".join(agent.bots.keys()))
     print("   RSI  : gen", agent.memory.current_generation())
     print("   Council:", list(agent.council.members.keys()) if agent.council else "none")

@@ -58,7 +58,10 @@ class CandidatePatcher:
         ws = self.workspace.create(gen_id, release_dir)
         source_patch = {"applied": False, "diff": "", "replacements": []}
         if ws.get("worktree_dir"):
-            want_chain = any("chained" in a or "compiler" in a for a in applied) or True
+            types = [c.get("type") for c in (change_set or [])]
+            want_chain = "regression_disable" not in types and (
+                any("chained" in a or "compiler" in a for a in applied) or True
+            )
             source_patch = self.workspace.apply_source_patch(
                 Path(ws["worktree_dir"]),
                 chained=want_chain,
@@ -140,6 +143,13 @@ class CandidatePatcher:
             target = str(change_set[0].get("target") or "")
         hyp = (hypothesis or {}).get("hypothesis", "")
         compiler = overlay.data.setdefault("compiler", {})
+        if "regression_disable" in types:
+            compiler["chained_arithmetic"] = False
+            compiler["power_operator"] = False
+            applied.append("REGRESSION: disable chained_arithmetic and power_operator")
+            overlay.data["patched_at"] = datetime.now().isoformat()
+            overlay.data["applied_patches"] = applied
+            return applied
         want_compiler = (
             "compiler_improve" in types
             or "eval_failure" in types

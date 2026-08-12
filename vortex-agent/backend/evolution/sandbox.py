@@ -117,6 +117,26 @@ class SandboxRunner:
         candidate["status"] = "sandbox_passed" if tests_pass else "sandbox_failed"
         return {"status": "success" if tests_pass else "error", "result": result, "passed": tests_pass}
 
+    def _check_deps(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
+        """Verify candidate Python can import declared requirements (no silent skip)."""
+        worktree = Path(candidate.get("worktree_dir") or "")
+        req = worktree / "vortex-agent" / "backend" / "requirements.txt"
+        if not req.exists():
+            req = Path(__file__).resolve().parent.parent / "requirements.txt"
+        needed = []
+        if req.exists():
+            for line in req.read_text().splitlines():
+                line = line.strip()
+                if line and not line.startswith("#"):
+                    needed.append(line.split("==")[0].split(">=")[0].split("[")[0].strip())
+        missing = []
+        for name in needed:
+            try:
+                __import__(name.replace("-", "_"))
+            except Exception:
+                missing.append(name)
+        return {"checked": needed, "missing": missing, "ok": not missing}
+
     def _run_worktree_unittests(self, candidate: Dict[str, Any], sandbox_home: Path) -> Dict[str, Any]:
         worktree = Path(candidate.get("worktree_dir") or "")
         backend = worktree / "vortex-agent" / "backend"

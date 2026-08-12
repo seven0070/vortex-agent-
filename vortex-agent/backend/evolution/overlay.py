@@ -33,6 +33,7 @@ def default_pointers() -> Dict[str, Any]:
         "last_known_good": None,
         "canary": None,
         "stable_live_score": None,
+        "promoted_at": None,
         "updated_at": None,
     }
 

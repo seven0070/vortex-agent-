@@ -25,9 +25,13 @@ class RollbackManager:
         self.memory = memory or (getattr(agent, "memory", None) if agent else None)
 
     def rollback(self, reason: str, failed_generation: int = None) -> Dict[str, Any]:
-        lkg = load_last_known_good()
         ptr = load_pointers()
         lkg_name = ptr.get("last_known_good")
+        if not lkg_name or str(lkg_name) == str(ptr.get("current")):
+            lkg = Overlay.genesis()
+            lkg_name = None
+        else:
+            lkg = load_last_known_good()
         activate(lkg)
         set_overlay(lkg.data)
         ptr["current"] = lkg_name
@@ -79,10 +83,13 @@ class RollbackManager:
         if not self.memory:
             return {"action": "skip", "reason": "no memory"}
         traces = self.memory.get_traces(window) or []
+        ptr = load_pointers()
+        promoted_at = ptr.get("promoted_at")
+        if promoted_at:
+            traces = [t for t in traces if (t.get("created_at") or "") >= str(promoted_at)]
         if len(traces) < 5:
             return {"action": "skip", "reason": "not enough traces"}
         avg = sum((t.get("score") or 0) for t in traces) / len(traces)
-        ptr = load_pointers()
         current = ptr.get("current")
         lkg = ptr.get("last_known_good")
         if current and lkg and str(current) == str(lkg) and ptr.get("stable_live_score") is None:

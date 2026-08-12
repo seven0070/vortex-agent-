@@ -373,6 +373,43 @@ class EvolutionEngine:
                 pass
         return candidate
 
+    def review_candidate(self, candidate: Dict[str, Any]) -> Dict[str, Any]:
+        """Score a prepared candidate against stable. Never auto-promotes."""
+        fixtures_stock = Path(__file__).resolve().parent.parent / "tests" / "fixtures" / "golden_tasks.json"
+        fixtures = json.loads(fixtures_stock.read_text()) if fixtures_stock.exists() else {}
+        baseline = self.benchmark.run_overlay(load_current().data, fixtures)
+        sandbox_res = self.sandbox.run_tests(candidate)
+        new_bench = self.benchmark.run(candidate=candidate, baseline=False)
+        regressions, critical = overlay_regressions(baseline.get("cases") or [], new_bench.get("cases") or [])
+        new_bench["regressions"] = regressions
+        new_bench["critical_regressions"] = critical
+        candidate["benchmark_results"] = new_bench
+        sec_res = self.security.scan(candidate)
+        policy = self.policy.decide(
+            baseline=baseline,
+            candidate=new_bench,
+            security=sec_res,
+            tests=sandbox_res.get("result") or sandbox_res,
+            canary={"passed": True},
+        )
+        candidate["promotion_policy"] = policy
+        candidate["baseline"] = {"score": baseline.get("score"), "quality": baseline.get("quality")}
+        if not sandbox_res.get("passed"):
+            candidate["decision"] = "rejected"
+            candidate["reason"] = "sandbox failed"
+        elif not sec_res.get("passed"):
+            candidate["decision"] = "rejected"
+            candidate["reason"] = "security failed"
+        elif not policy.get("all_passed"):
+            candidate["decision"] = "rejected"
+            candidate["reason"] = policy.get("reason")
+        else:
+            candidate["decision"] = "eligible"
+            candidate["reason"] = "gates passed but review_candidate does not deploy"
+        candidate["status"] = candidate["decision"]
+        self._save_candidate(candidate)
+        return candidate
+
     def _council_and_resolve(self, candidate: Dict[str, Any], baseline: Dict, bench: Dict) -> Dict[str, Any]:
         """Council = competing views. Resolution = which view wins. Does not execute."""
         bq = float(baseline.get("quality", baseline.get("score", 0)) or 0)
@@ -446,11 +483,16 @@ class EvolutionEngine:
         set_overlay(overlay.data)
         name = f"v{int(candidate['generation_id']):03d}"
         ptr = load_pointers()
-        # last known good stays until this write — previous release dir is untouched
-        ptr["last_known_good"] = name
+        # previous successful generation remains last_known_good so rollback has a target
+        prev = ptr.get("current")
+        if prev and prev != name:
+            ptr["last_known_good"] = prev
+        elif not ptr.get("last_known_good"):
+            ptr["last_known_good"] = name
         ptr["current"] = name
         ptr["canary"] = None
         ptr["stable_live_score"] = bench.get("score")
+        ptr["promoted_at"] = datetime.now().isoformat()
         save_pointers(ptr)
         try:
             from .overlay import releases_dir

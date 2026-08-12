@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     agent = VortexAgent(memory)
     yield
 
-app = FastAPI(title="Vortex Agent", version="0.5.0", lifespan=lifespan)
+app = FastAPI(title="Vortex Agent", version="1.0.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 

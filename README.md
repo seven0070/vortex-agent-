@@ -1,4 +1,4 @@
-# Vortex Agent — Evolution Engine v1 (0.5.0)
+# Vortex Agent — 1.0
 
 A local swarm agent with **real self-improvement** — not a mock loop. Vortex finds a weakness, writes an isolated candidate overlay, runs real sandbox tests, benchmarks against last-known-good, canaries, and only then promotes. If canary or monitor fails, it rolls back. Production source is never overwritten.
 
@@ -143,7 +143,7 @@ tools/
 ├── shell/ (exec sandboxed)
 ├── github/ (status)
 ├── database/ (query memory.db SELECT)
-├── web/ (search mock + fetch)
+├── web/ (local knowledge search + fetch)
 ├── code/ (analyze/test + codeforge)
 ├── communication/ (translate/hide)
 └── external/ (mcp.list)
@@ -300,11 +300,11 @@ vortex-agent/backend/
   pipeline.py (Interface→Sovereign→Governance→…→Self-Improvement)
   evals.py (Vortex Benchmark)
   swarm.py (VortexAgent + Council integration)
-  main.py (FastAPI 0.5.0)
+  main.py (FastAPI 1.0.0)
   cli.py
   static/index.html (full architecture dashboard)
   tests/test_rsi.py + test_architecture.py + test_evolution.py
-  tests/fixtures/  tests/golden_outputs/  tests/regressions/  tests/benchmarks/
+  tests/unit/  tests/integration/  tests/security_gates/  tests/benchmark/  tests/evolution_loop/
 ```
 
 ## Implementation order completed
