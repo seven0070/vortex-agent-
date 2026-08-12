@@ -375,7 +375,7 @@ else:
     @app.get("/")
     async def index():
         return HTMLResponse(
-            f"<h1>🌪️ {NAME} API</h1><p>v{VERSION} · Hermes-inspired</p>"
+            f"<h1>🌪️ {NAME}</h1><p>v{VERSION} · autonomous multi-agent OS</p>"
             "<ul><li><a href='/health'>/health</a></li>"
             "<li><a href='/api/meta'>/api/meta</a></li>"
             "<li><a href='/docs'>/docs</a></li></ul>"

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Vortex entrypoint: `python run.py` (API) or `python run.py cli`."""
+"""Vortex Agent entrypoint: `python run.py` (API) or `python run.py cli`."""
 import sys
 from pathlib import Path
 

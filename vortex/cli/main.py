@@ -1,4 +1,4 @@
-"""Vortex CLI — interactive agent shell."""
+"""Vortex Agent CLI — interactive agent shell."""
 from __future__ import annotations
 
 import json
@@ -6,11 +6,12 @@ import sys
 import time
 
 from vortex.agent.os import VortexOS
-from vortex.constants import NAME, VERSION
+from vortex.constants import NAME, VERSION, TAGLINE
 
 
 BANNER = f"""
-🌪️  {NAME} v{VERSION} — Hermes-inspired autonomous agent
+🌪️  {NAME} v{VERSION}
+   {TAGLINE}
    Bots: {{bots}}
    Brain: {{provider}} · tools: {{tools}}
    Type /help for commands, /quit to exit.

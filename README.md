@@ -1,12 +1,12 @@
 # 🌪️ Vortex Agent
 
-**Autonomous chief + multi-project Agent Council — deliberate, vote, execute.**
+**Autonomous multi-agent OS** — council chamber, parallel seat workers, chief execution.
 
-Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspired autonomous multi-agent OS: a narrow core waist, capability at the edges (tools · skills · swarm · **council**), and a closed learning loop.
+Vortex Agent is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspired autonomous multi-agent OS: a narrow core waist, capability at the edges (tools · skills · swarm · **council chamber**), and a closed learning loop.
 
 ### Agent Council — members *are* the agent projects
 
-Twenty-four weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex's autonomous chief executes**.
+Twenty-four weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex Agent's autonomous chief executes**.
 
 | | Seat | Project | Mandate |
 |---|------|---------|---------|

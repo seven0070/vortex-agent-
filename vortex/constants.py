@@ -4,9 +4,9 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-NAME = "Vortex"
-VERSION = "1.6.0"
-TAGLINE = "24-seat council chamber · parallel seat agents · autonomous chief"
+NAME = "Vortex Agent"
+VERSION = "1.6.1"
+TAGLINE = "Autonomous multi-agent OS · 24-seat council chamber"
 
 VORTEX_HOME = Path(os.environ.get("VORTEX_HOME", Path.home() / ".vortex")).expanduser()
 WORKSPACE = VORTEX_HOME / "workspace"

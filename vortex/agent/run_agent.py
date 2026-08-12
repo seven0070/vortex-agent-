@@ -180,16 +180,16 @@ class AIAgent:
 
         if low in ("hello", "hi", "hey", "yo"):
             return (
-                f"🌪️ Vortex online · brain={self.brain.provider} · "
+                f"🌪️ Vortex Agent online · brain={self.brain.provider} · "
                 f"tools={len(self.enabled_tools())}. "
-                "Give me a goal or `/auto <goal>`."
+                "Give me a goal, `/auto <goal>`, or `/council <goal>`."
             )
         if low in ("help", "/help", "who are you"):
             return (
-                "I'm Vortex — Hermes-inspired autonomous agent with an AI Council.\n"
+                "I'm Vortex Agent — an autonomous multi-agent OS with a 24-seat council chamber.\n"
                 "  • Describe a goal and I'll plan → act → observe\n"
                 "  • `/auto <goal>` force a solo mission\n"
-                "  • `/council <goal>` deliberate then execute\n"
+                "  • `/council <goal>` deliberate, vote, then chamber-execute\n"
                 "  • Tools: " + ", ".join(self.enabled_tools()[:12]) + "…"
             )
         if low.startswith("/council ") or low.startswith("/deliberate "):
