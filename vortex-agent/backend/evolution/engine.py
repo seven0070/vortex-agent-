@@ -450,7 +450,28 @@ class EvolutionEngine:
         ptr["last_known_good"] = name
         ptr["current"] = name
         ptr["canary"] = None
+        ptr["stable_live_score"] = bench.get("score")
         save_pointers(ptr)
+        try:
+            from .overlay import releases_dir
+            stable_doc = {
+                "generation": name,
+                "parent_generation": candidate.get("parent_generation"),
+                "benchmark": bench,
+                "applied_patches": candidate.get("applied_patches"),
+                "promoted_at": datetime.now().isoformat(),
+            }
+            (releases_dir() / "STABLE.json").write_text(json.dumps(stable_doc, default=str, indent=2))
+            vs = Path(candidate.get("release_dir") or release_path(candidate["generation_id"])) / "vs_stable.json"
+            vs.write_text(json.dumps({
+                "candidate": name,
+                "score": bench.get("score"),
+                "quality": bench.get("quality"),
+                "regressions": bench.get("regressions"),
+                "decision": "promoted",
+            }, default=str, indent=2))
+        except Exception:
+            pass
 
         gen_id = None
         if self.memory:

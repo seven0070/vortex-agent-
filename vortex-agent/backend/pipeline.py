@@ -32,6 +32,19 @@ class RequestPipeline:
         t0 = time.time()
         trail: List[str] = ["interface"]
         ctx: Dict[str, Any] = {"message": message, "layers": trail, "memories": [], "denied": False}
+        obs = getattr(self.agent, "observability", None)
+        if obs and getattr(obs, "tracer", None):
+            try:
+                gen = 0
+                try:
+                    gen = int(self.agent.memory.current_generation() or 0)
+                except Exception:
+                    gen = 0
+                ctx["trace_id"] = obs.tracer.start_trace(
+                    goal=message, generation_id=gen, agent_id="chief", model="heuristic",
+                )
+            except Exception:
+                pass
 
         # 1. Sovereign — identity, objectives, operating boundaries
         if self.agent.sovereign:
@@ -127,13 +140,65 @@ class RequestPipeline:
             pass
         trail.append("self-improvement")
 
+        # Live monitor: automatic rollback if the promoted generation degrades
+        rsi = getattr(self.agent, "rsi", None)
+        if rsi and not getattr(rsi, "eval_mode", False) and getattr(rsi, "evolution", None):
+            try:
+                ctx["monitor"] = rsi.evolution.rollback.monitor_and_maybe_rollback()
+            except Exception:
+                pass
+
         self._finish(ctx, reply, t0)
         return reply
 
     def _finish(self, ctx: Dict[str, Any], reply: str, t0: float) -> None:
+        last = {}
+        try:
+            last = getattr(self.agent.bots.get("chief"), "_last", {}) or {}
+        except Exception:
+            last = {}
+        gen = 0
+        try:
+            gen = int(self.agent.memory.current_generation() or 0)
+        except Exception:
+            gen = 0
+        memories = ctx.get("memories") or []
         ctx["layers"] = list(dict.fromkeys(ctx.get("layers") or []))
         ctx["latency_ms"] = int((time.time() - t0) * 1000)
         ctx["reply_preview"] = (reply or "")[:200]
+        ctx["generation"] = gen
+        ctx["model"] = "heuristic"
+        ctx["agent"] = "chief"
+        ctx["memory_hits"] = len(memories)
+        ctx["tool_calls"] = [last["tool"]] if last.get("tool") else []
+        ctx["cost"] = 0.0
+        ctx["result"] = (reply or "")[:200]
+        ctx["evaluation_score"] = ctx.get("score")
+        obs = getattr(self.agent, "observability", None)
+        if obs and getattr(obs, "tracer", None):
+            try:
+                tid = ctx.get("trace_id")
+                if not tid:
+                    tid = obs.tracer.start_trace(
+                        goal=ctx.get("message") or "",
+                        generation_id=gen,
+                        agent_id="chief",
+                        model="heuristic",
+                        route=ctx.get("route"),
+                        memory_hits=len(memories),
+                    )
+                    ctx["trace_id"] = tid
+                obs.tracer.finish_trace(
+                    tid,
+                    final_outcome=(reply or "")[:200],
+                    score=float(ctx.get("score") or 0),
+                )
+                if getattr(obs, "metrics", None):
+                    obs.metrics.inc("pipeline_requests")
+                    if last.get("tool"):
+                        obs.metrics.record_tool_call(last["tool"], last.get("status") or "ok", ctx["latency_ms"])
+            except Exception:
+                pass
         self.agent.last_pipeline = ctx
 
     def _should_orchestrate(self, message: str) -> bool:

@@ -75,17 +75,29 @@ class RollbackManager:
         }
 
     def monitor_and_maybe_rollback(self, window: int = 20, floor: float = 0.45) -> Dict[str, Any]:
-        """If recent live scores collapse after a deploy, restore LKG."""
+        """If live scores collapse versus the stable generation, restore LKG."""
         if not self.memory:
             return {"action": "skip", "reason": "no memory"}
         traces = self.memory.get_traces(window) or []
         if len(traces) < 5:
             return {"action": "skip", "reason": "not enough traces"}
         avg = sum((t.get("score") or 0) for t in traces) / len(traces)
-        if avg < floor:
-            ptr = load_pointers()
+        ptr = load_pointers()
+        current = ptr.get("current")
+        lkg = ptr.get("last_known_good")
+        if current and lkg and str(current) == str(lkg) and ptr.get("stable_live_score") is None:
+            # single generation: still roll back to genesis overlay if scores collapse
+            pass
+        degrade = avg < floor
+        stable = ptr.get("stable_live_score")
+        if stable is not None:
+            try:
+                degrade = degrade or avg < float(stable) * 0.85
+            except (TypeError, ValueError):
+                pass
+        if degrade:
             return self.rollback(
-                reason=f"monitor score {avg:.3f} < {floor}",
-                failed_generation=ptr.get("current"),
+                reason=f"monitor score {avg:.3f} degraded (floor={floor}, stable={stable})",
+                failed_generation=current,
             )
-        return {"action": "hold", "avg_score": round(avg, 3)}
+        return {"action": "hold", "avg_score": round(avg, 3), "stable_live_score": stable}

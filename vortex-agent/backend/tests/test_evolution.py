@@ -249,6 +249,50 @@ class EndToEndEvolutionTests(unittest.TestCase):
         self.assertIn("2026-12-01", reply)
         self.assertTrue((self.agent.last_pipeline or {}).get("memory_hit"))
 
+    def test_request_telemetry_fields(self):
+        self.agent.chat("what is 7 times 7")
+        rec = self.agent.last_pipeline or {}
+        for key in ("trace_id", "generation", "model", "agent", "route",
+                    "memory_hits", "tool_calls", "latency_ms", "cost",
+                    "result", "evaluation_score"):
+            self.assertIn(key, rec, rec)
+
+    def test_automatic_rollback_on_degraded_scores(self):
+        evo = self.agent.rsi.evolution
+        evo.evolve_once()
+        from evolution.overlay import load_pointers, save_pointers, Overlay, activate
+        from evolution.compiler import set_overlay, default_overlay
+        ptr = load_pointers()
+        ptr["stable_live_score"] = 0.95
+        save_pointers(ptr)
+        for i in range(6):
+            self.memory.save_trace({
+                "generation": self.memory.current_generation(),
+                "task": f"degrade {i}",
+                "bot": "chief",
+                "status": "error",
+                "score": 0.1,
+                "latency_ms": 1,
+            })
+        rb = evo.rollback.monitor_and_maybe_rollback(window=6, floor=0.45)
+        self.assertEqual(rb.get("action"), "rollback", rb)
+        set_overlay(default_overlay())
+        activate(Overlay.genesis())
+
+
+class HonestToolsTests(unittest.TestCase):
+    def test_web_search_does_not_fabricate(self):
+        from tools.web import WebSearchTool
+        res = WebSearchTool.execute("no-such-unique-token-zzz-vortex")
+        self.assertNotIn("Mock result", res.message or "")
+        self.assertNotIn("mock", (res.message or "").lower())
+
+    def test_browser_does_not_simulate_success(self):
+        from tools.browser import BrowserOpenTool
+        res = BrowserOpenTool.execute("https://example.com")
+        self.assertEqual(res.status, "error")
+        self.assertNotIn("simulated", (res.message or "").lower())
+
 
 if __name__ == "__main__":
     unittest.main()

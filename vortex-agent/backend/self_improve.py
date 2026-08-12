@@ -160,6 +160,18 @@ class LearnedRouter:
             for target, w in self.weights.get(tok, {}).items():
                 if w > 0:
                     scores[target] += w
+        try:
+            from evolution.overlay import get_active
+            boosts = (get_active().data or {}).get("router_boosts") or {}
+            for tok in tokenize(message):
+                bucket = boosts.get(tok) or {}
+                if not isinstance(bucket, dict):
+                    continue
+                for target, w in bucket.items():
+                    if w:
+                        scores[target] += float(w)
+        except Exception:
+            pass
         if not scores:
             return None
         target, score = scores.most_common(1)[0]

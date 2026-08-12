@@ -526,26 +526,15 @@ class VortexAgent:
 
     def chat(self, message):
         self.memory.save_message("user", message)
-        # observability trace start
-        trace_id = None
-        if self.observability:
-            try:
-                trace_id = self.observability.tracer.start_trace(goal=message, generation_id=self.memory.current_generation())
-            except:
-                pass
-
         if self.pipeline:
             reply = self.pipeline.handle(message)
         else:
             reply = self.bots["chief"].handle(message)
 
-        # observability finish
-        if self.observability and trace_id:
+        if self.observability:
             try:
-                score = (self.last_pipeline or {}).get("score", 0.7)
-                self.observability.tracer.finish_trace(trace_id, final_outcome=reply[:200], score=score)
                 self.observability.metrics.inc("chat_total")
-            except:
+            except Exception:
                 pass
 
         # sovereign lifecycle awareness

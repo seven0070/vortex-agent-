@@ -58,14 +58,15 @@ class PromotionPolicy:
             "regressions_zero": regressions_zero,
             "no_critical_regression": len(critical) == 0,
             "canary_pass": canary_pass,
-            "improvement_earned": quality_up or (quality_ok and (reliability_up or latency_down or cost_down)),
+            "benchmark_gt_stable": quality_up,
+            "improvement_earned": quality_up,
         }
-        # hard requirement: quality must not drop, tests/security/canary/regressions must pass,
-        # and at least one dimension must improve.
+        # Promote only when: tests PASS, security PASS, benchmark > stable,
+        # critical regressions = 0, canary PASS. Governance is a separate gate.
         hard = (
             gates["tests_pass"]
             and gates["security_pass"]
-            and gates["quality_ok"]
+            and gates["benchmark_gt_stable"]
             and gates["reliability_ok"]
             and gates["latency_ok"]
             and gates["cost_ok"]
