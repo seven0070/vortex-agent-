@@ -35,7 +35,10 @@ Twenty-four weighted seats, each embodying a real open-source agent stack. They 
 | 🏛 | **AIOffice** | [Gaurav2693/ai-office](https://github.com/Gaurav2693/ai-office) | Isometric multi-agent office |
 | 🌊 | **Ruflo** | [ruvnet/ruflo](https://github.com/ruvnet/ruflo) | Meta-harness · multiplayer swarms |
 
-Pipeline: **brief → propose → critique → vote → chief executes**.  
+Pipeline: **brief → propose → critique → vote → chamber (parallel seat agents) → chief merge**.
+
+After the vote, the **Council Chamber** dispatches real worker agents (scoped toolsets) in parallel. Each seat writes artifacts under `~/.vortex/workspace/council/<id>/seats/`, then the chief merges into `FINAL.md`.
+
 Prime + Hermes hold a **hard veto** on harmful goals. Opik demands traces/evals; DSPy demands modular steps; LifeOS demands Ideal-State progress; **Memory** demands team assets; **Cognee** demands graph-linked recall. **Multica/Ruflo** demand multi-agent dispatch; **OfficeCLI** demands real document artifacts; **Alook/AIOffice** demand human-visible rooms.
 
 ```

@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 import threading
-from typing import Callable, Dict, List, Optional
+from typing import Callable, Dict, List, Optional, Set
 
 from vortex.agent.council import AgentCouncil
 from vortex.agent.llm import LLMBrain
@@ -64,7 +64,7 @@ class VortexOS:
         self._listeners: List[Callable[[dict], None]] = []
         self._lock = threading.Lock()
 
-        # Council first (executor factory closes over OS state)
+        # Council first (executor + seat worker factories close over OS state)
         self.council = AgentCouncil(
             session_db=self.db,
             vector=self.vector,
@@ -73,6 +73,8 @@ class VortexOS:
             brain=self.brain,
             event_cb=self._fanout,
             executor_factory=self._make_executor,
+            seat_worker_factory=self._make_seat_worker,
+            use_chamber=True,
         )
 
         # primary autonomous agent (full toolset + council tools)
@@ -101,19 +103,47 @@ class VortexOS:
             self.spawn_bot(name, role, ts, quiet=True)
 
     def _make_executor(self) -> AIAgent:
-        """Fresh child agent for post-council execution (no recursive council by default)."""
+        """Chief merge agent after chamber workers finish (no recursive council)."""
         return AIAgent(
             session_db=self.db,
             vector=self.vector,
             skills=self.skills,
             memory_provider=self.memory,
-            toolsets=["core", "crypto"],  # execute without re-entering council
-            max_steps=12,
+            toolsets=["core", "crypto", "files", "memory"],
+            max_steps=10,
             event_cb=self._fanout,
-            role="executor",
+            role="chief-merge",
             brain=self.brain,
             council=None,
-            blocked_tools={"convene_council"},
+            blocked_tools={"convene_council", "delegate_task"},
+        )
+
+    def _make_seat_worker(
+        self,
+        toolset: str = "core",
+        role: str = "seat",
+        blocked: Optional[set] = None,
+    ) -> AIAgent:
+        """Parallel chamber worker — one seat, scoped toolset, no council recursion."""
+        blocked_tools = set(blocked or set()) | {"convene_council"}
+        # Map single toolset names; allow composed presets
+        ts = toolset or "core"
+        toolsets = [ts]
+        # Ensure workers always have files+memory for artifacts
+        if ts not in ("full", "core"):
+            toolsets = [ts, "files", "memory", "meta"]
+        return AIAgent(
+            session_db=self.db,
+            vector=self.vector,
+            skills=self.skills,
+            memory_provider=self.memory,
+            toolsets=toolsets,
+            max_steps=6,
+            event_cb=self._fanout,
+            role=role,
+            brain=self.brain,
+            council=None,
+            blocked_tools=blocked_tools,
         )
 
     # ── event bus ──────────────────────────────────────────────────────────

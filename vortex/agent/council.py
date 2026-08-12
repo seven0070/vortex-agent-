@@ -500,11 +500,13 @@ class CouncilSession:
     consensus: str = ""
     directive: Dict[str, Any] = field(default_factory=dict)
     execution: Dict[str, Any] = field(default_factory=dict)
+    chamber: Dict[str, Any] = field(default_factory=dict)
     dissent: List[str] = field(default_factory=list)
     created_at: str = ""
     finished_at: str = ""
     auto_execute: bool = True
     max_rounds: int = 3
+    use_chamber: bool = True
 
     def to_dict(self) -> dict:
         return {
@@ -519,10 +521,12 @@ class CouncilSession:
             "consensus": self.consensus,
             "directive": self.directive,
             "execution": self.execution,
+            "chamber": self.chamber,
             "dissent": self.dissent,
             "created_at": self.created_at,
             "finished_at": self.finished_at,
             "auto_execute": self.auto_execute,
+            "use_chamber": self.use_chamber,
             "opinion_count": len(self.opinions),
             "mission_id": self.id,
             "members": [
@@ -1281,6 +1285,8 @@ class AgentCouncil:
         event_cb: Optional[EventCB] = None,
         seats: Optional[List[Seat]] = None,
         executor_factory: Optional[Callable[..., Any]] = None,
+        seat_worker_factory: Optional[Callable[..., Any]] = None,
+        use_chamber: bool = True,
     ):
         self.session_db = session_db
         self.vector = vector
@@ -1290,6 +1296,9 @@ class AgentCouncil:
         self.event_cb = event_cb
         self.seats = {s.id: s for s in (seats or DEFAULT_SEATS)}
         self.executor_factory = executor_factory
+        # seat_worker_factory(toolset=, role=, blocked=) -> AIAgent
+        self.seat_worker_factory = seat_worker_factory
+        self.use_chamber = use_chamber
         self.sessions: Dict[str, CouncilSession] = {}
         self._lock = threading.Lock()
         self._mind = PersonaMind()
@@ -1347,6 +1356,7 @@ class AgentCouncil:
         auto_execute: bool = True,
         background: bool = True,
         max_rounds: int = 3,
+        use_chamber: Optional[bool] = None,
     ) -> dict:
         goal = (goal or "").strip()
         if not goal:
@@ -1364,6 +1374,7 @@ class AgentCouncil:
             created_at=_now(),
             auto_execute=auto_execute,
             max_rounds=max(1, min(int(max_rounds or 3), 5)),
+            use_chamber=self.use_chamber if use_chamber is None else bool(use_chamber),
         )
         with self._lock:
             self.sessions[cid] = session
@@ -1514,13 +1525,40 @@ class AgentCouncil:
 
             if session.auto_execute and winner != "reject":
                 session.status = "executing"
-                self._emit("council_executing", session, message="Vortex chief executing council directive")
+                self._emit(
+                    "council_executing",
+                    session,
+                    message="Chamber + chief executing council directive",
+                )
                 session.execution = self._execute_directive(session)
+                session.chamber = {
+                    k: session.execution.get(k)
+                    for k in (
+                        "mode",
+                        "workers",
+                        "worker_count",
+                        "completed",
+                        "failed",
+                        "chamber_dir",
+                        "verdict_path",
+                        "final_path",
+                        "summary",
+                    )
+                    if k in (session.execution or {})
+                }
+                # chamber is part of the execution pipeline
+                if "chamber" not in session.rounds:
+                    session.rounds.append("chamber")
                 result_text = self._format_result(session)
                 session.status = "completed"
                 session.finished_at = _now()
                 self._remember(session)
-                self._emit("mission_completed", session, result=result_text, steps=len(session.opinions))
+                self._emit(
+                    "mission_completed",
+                    session,
+                    result=result_text,
+                    steps=len(session.opinions),
+                )
                 self._emit("council_completed", session, result=result_text)
             elif winner == "reject":
                 session.status = "completed"
@@ -1776,25 +1814,59 @@ class AgentCouncil:
     def _execute_directive(self, session: CouncilSession) -> dict:
         directive = session.directive or {}
         exec_goal = directive.get("exec_goal") or session.goal
+
+        # ── Chamber path: real parallel seat agents ─────────────────────
+        if session.use_chamber and self.seat_worker_factory is not None:
+            try:
+                from vortex.agent.chamber import CouncilChamber
+
+                chamber = CouncilChamber(
+                    executor_factory=self.seat_worker_factory,
+                    event_cb=self.event_cb,
+                )
+                return chamber.run(
+                    council_id=session.id,
+                    goal=session.goal,
+                    seats=self.seats,
+                    seat_ids=session.seats,
+                    directive=directive,
+                    chief_factory=self.executor_factory,
+                )
+            except Exception as e:
+                # fall through to single-chief path
+                fallback_err = str(e)
+        else:
+            fallback_err = None
+
         if not self.executor_factory:
             return {
                 "status": "no_executor",
                 "result": json.dumps(directive, indent=2),
                 "goal": exec_goal,
+                "chamber_error": fallback_err,
             }
         try:
             agent = self.executor_factory()
             agent.event_cb = self.event_cb
             result = agent.run(exec_goal, background=False, max_steps=12)
-            return {
+            out = {
                 "status": result.get("status"),
+                "mode": "chief_only",
                 "mission_id": result.get("id"),
                 "result": result.get("result") or result.get("error") or "",
                 "steps": result.get("step_count"),
                 "goal": exec_goal,
             }
+            if fallback_err:
+                out["chamber_error"] = fallback_err
+            return out
         except Exception as e:
-            return {"status": "failed", "error": str(e), "goal": exec_goal}
+            return {
+                "status": "failed",
+                "error": str(e),
+                "goal": exec_goal,
+                "chamber_error": fallback_err,
+            }
 
     def _format_result(self, session: CouncilSession) -> str:
         d = session.directive or {}
@@ -1825,8 +1897,32 @@ class AgentCouncil:
         lines += ["", "## Execution"]
         if ex.get("status") == "blocked":
             lines.append(f"Blocked: {ex.get('reason')}")
+        elif ex.get("mode") == "chamber":
+            lines.append(
+                f"Mode: **chamber** · workers={ex.get('worker_count', 0)} "
+                f"({ex.get('completed', 0)} ok / {ex.get('failed', 0)} failed)"
+            )
+            if ex.get("chamber_dir"):
+                lines.append(f"Chamber: `{ex.get('chamber_dir')}/`")
+            if ex.get("final_path"):
+                lines.append(f"Final: `{ex.get('final_path')}`")
+            workers = ex.get("workers") or []
+            if workers:
+                lines += ["", "### Seat workers"]
+                for w in workers:
+                    flag = "✅" if w.get("status") == "completed" else "❌"
+                    lines.append(
+                        f"- {flag} **{w.get('seat_name')}** (`{w.get('seat_id')}`) "
+                        f"— {w.get('status')} · {w.get('steps', 0)} steps"
+                        + (f" · `{w.get('artifact')}`" if w.get("artifact") else "")
+                    )
+            body = (ex.get("result") or "").strip()
+            if body:
+                lines += ["", "### Chamber verdict", body[:4000]]
         else:
-            lines.append(f"Status: {ex.get('status', 'n/a')} · mission={ex.get('mission_id', '—')}")
+            lines.append(
+                f"Status: {ex.get('status', 'n/a')} · mission={ex.get('mission_id', '—')}"
+            )
             body = (ex.get("result") or ex.get("error") or "").strip()
             if body:
                 lines += ["", "### Chief output", body[:3000]]

@@ -41,6 +41,7 @@ class CouncilRequest(BaseModel):
     auto_execute: bool = True
     wait: bool = False
     max_rounds: int = Field(default=3, ge=1, le=5)
+    use_chamber: bool = True
 
 
 os_runtime: Optional[VortexOS] = None
@@ -120,11 +121,12 @@ async def meta():
         "provider": os_runtime.brain.provider,
         "model": os_runtime.brain.model or "offline-planner",
         "workspace": str(WORKSPACE),
-        "architecture": "hermes-inspired + agent-council",
+        "architecture": "hermes-inspired + council-chamber",
         "tools": os_runtime.list_tools(),
         "bots": os_runtime.list_bots(),
         "skills": os_runtime.skills.list(),
         "council_seats": os_runtime.council.list_seats(),
+        "chamber": True,
     }
 
 
@@ -145,12 +147,14 @@ async def council_convene(req: CouncilRequest):
         raise HTTPException(400, "goal required")
     if req.wait:
         result = await asyncio.to_thread(
-            os_runtime.council.convene,
-            req.goal,
-            req.seats,
-            req.auto_execute,
-            False,
-            req.max_rounds,
+            lambda: os_runtime.council.convene(
+                req.goal,
+                seat_ids=req.seats,
+                auto_execute=req.auto_execute,
+                background=False,
+                max_rounds=req.max_rounds,
+                use_chamber=req.use_chamber,
+            )
         )
     else:
         result = os_runtime.council.convene(
@@ -159,6 +163,7 @@ async def council_convene(req: CouncilRequest):
             auto_execute=req.auto_execute,
             background=True,
             max_rounds=req.max_rounds,
+            use_chamber=req.use_chamber,
         )
     return result
 

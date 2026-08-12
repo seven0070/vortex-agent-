@@ -272,7 +272,36 @@
         );
         break;
       case "council_executing":
-        appendStep("tool", "⚡", "Chief executing council directive");
+        appendStep("tool", "⚡", "Chamber + chief executing directive");
+        break;
+      case "chamber_dispatch":
+        clearTraceEmpty();
+        appendStep(
+          "system",
+          "⚡",
+          ev.message || "Dispatching seat workers",
+          (ev.workers || []).map((w) => w.name || w.seat).join(", ")
+        );
+        break;
+      case "chamber_worker_start":
+        appendStep(
+          "tool",
+          "⚙",
+          `${ev.seat_name || ev.seat} worker started`,
+          (ev.sub_goal || "").slice(0, 120)
+        );
+        break;
+      case "chamber_worker_done":
+        appendStep(
+          ev.status === "completed" ? "obs" : "obs err",
+          "✓",
+          `${ev.seat_name || ev.seat}: ${ev.status}` +
+            (ev.artifact ? ` · ${ev.artifact}` : ""),
+          ev.steps != null ? `${ev.steps} steps` : ""
+        );
+        break;
+      case "chamber_merge":
+        appendStep("system", "📎", ev.message || "Chief merging chamber outputs");
         break;
       case "council_completed":
         if (ev.result) showResult(ev.result);
