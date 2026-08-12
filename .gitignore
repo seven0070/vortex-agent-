@@ -1,48 +1,36 @@
-# Dependencies
-venv/
-.venv/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Build artifacts
-build/
-dist/
+*.py[cod]
 *.egg-info/
+.venv/
+venv/
+.Python
+dist/
+build/
+*.so
 
-# Environment files
+# Env / secrets
 .env
 .env.local
 *.env.*
 
-# Logs
-*.log
-
-# IDE/Editor
+# IDE / OS
 .vscode/
 .idea/
+.DS_Store
 *.swp
 *.swo
-*.tmp
 
-# Coverage
+# Logs / coverage
+*.log
 .coverage
-coverage/
 htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
-# Python cache
-.Python
-*.so
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Vortex local state (lives in $HOME/.vortex, but just in case)
+# Local Vortex runtime state
 .vortex/
 
-# Local Hermes reference clone (not part of Vortex ship)
+# Reference clones
 hermes-agent-ref/
-.venv/
-*.egg-info/

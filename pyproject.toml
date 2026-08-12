@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "vortex-agent"
-version = "2.1.0"
+version = "2.3.0"
 description = "Vortex Agent — autonomous multi-agent OS (Hermes-style layout, 24-seat council chamber)"
 readme = "README.md"
 license = { text = "MIT" }
