@@ -1,24 +1,28 @@
 # 🌪️ Vortex Agent
 
-**Autonomous agent + AI Council — deliberate, vote, execute.**
+**Autonomous chief + multi-project Agent Council — deliberate, vote, execute.**
 
 Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspired autonomous multi-agent OS: a narrow core waist, capability at the edges (tools · skills · swarm · **council**), and a closed learning loop.
 
-### Agent Council
+### Agent Council — members *are* the agent projects
 
-Seven weighted seats deliberate before the chief acts:
+Ten weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex's autonomous chief executes**.
 
-| Seat | Persona | Mandate |
-|------|---------|---------|
-| ♟ Atlas | Chief Strategist | Frame goal, criteria, sequencing |
-| 🔍 Lyra | Research Lead | Evidence, unknowns, sources |
-| ⚙ Forge | Systems Architect | Buildable technical path |
-| ⚔ Vex | Red Team Critic | Attack weak plans |
-| 🛡 Aegis | Safety & Ethics | Harm / privacy veto |
-| 🔒 Shade | Security Counsel | Threat model, least privilege |
-| ⚡ Pulse | Execution Officer | Turn vote into action plan |
+| | Seat | Project | Mandate |
+|---|------|---------|---------|
+| ♟ | **Prime** | [Avyayalaya/agent-prime](https://github.com/Avyayalaya/agent-prime) | Quality gate · persistent OS |
+| 🖥 | **Zero** | [agent0ai/agent-zero](https://github.com/agent0ai/agent-zero) | Full computer · shell · browser |
+| 🐝 | **Buzz** | [block/buzz](https://github.com/block/buzz) | Hive mind · human↔agent rooms |
+| ☤ | **Hermes** | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) | Learning loop · skills · memory |
+| 🏢 | **QM** | [yc-software/qm](https://github.com/yc-software/qm) | Multiplayer work harness |
+| 📁 | **Eve** | [vercel/eve](https://github.com/vercel/eve) | Filesystem-first durable agents |
+| 🗺 | **Odysseus** | [odysseus-dev/odysseus](https://github.com/odysseus-dev/odysseus) | Self-hosted AI workspace |
+| 👷 | **OpenWorker** | [andrewyng/openworker](https://github.com/andrewyng/openworker) | Finished deliverables |
+| ⚡ | **Grok** | [xai-org/grok-build](https://github.com/xai-org/grok-build) | Coding harness · TUI · shell |
+| 📓 | **Notebook** | research synthesizer | Evidence · structured reports |
 
-Pipeline: **brief → propose → critique → vote → chief executes**.
+Pipeline: **brief → propose → critique → vote → chief executes**.  
+Prime + Hermes hold a **hard veto** on harmful goals.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -78,6 +82,7 @@ Without keys, the **offline planner** still runs full multi-step missions.
 
 - **Autonomous missions** — goal in, plan → act → observe until done
 - **Live trace** — WebSocket + SSE thought/tool/observation stream
+- **Agent Council** — 10 project seats deliberate, then chief executes
 - **Swarm** — chief · researcher · architect · cipher · scout (role toolsets)
 - **Skills** — bundled `SKILL.md` playbooks + auto-learned skills from successful runs
 - **Memory** — SQLite sessions, FTS5 search, vector recall, `MEMORY.md`

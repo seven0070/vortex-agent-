@@ -130,7 +130,7 @@
         )}44,rgba(34,211,238,0.12))">${esc(s.icon || "◆")}</div>
         <div class="bot-meta">
           <div class="name">${esc(s.name)}</div>
-          <div class="role">${esc(s.title)} · w=${esc(s.weight)}</div>
+          <div class="role">${esc(s.project || s.title)} · w=${esc(s.weight)}</div>
         </div>
       </li>`
       )
@@ -258,7 +258,7 @@
         appendStep(
           "thought",
           ev.step || "·",
-          `${ev.seat_name || ev.seat} · ${ev.round}: ${ev.summary || ""}`,
+          `${ev.seat_name || ev.seat}${ev.project ? " · " + ev.project : ""} · ${ev.round}: ${ev.summary || ""}`,
           ev.stance ? `stance=${ev.stance}${ev.vote ? " vote=" + ev.vote : ""}` : ""
         );
         break;
@@ -538,10 +538,15 @@
     const d = s.directive || {};
     const ex = s.execution || {};
     const lines = [
-      `# ⚖ Council Verdict`,
+      `# ⚖ Vortex Agent Council — Verdict`,
       `**Goal:** ${s.goal || ""}`,
       `**Decision:** ${(d.decision || s.status || "").toUpperCase()}`,
       `**Tally:** ${JSON.stringify(s.tally || {})}`,
+      "",
+      "## Seated projects",
+      ...(s.members || []).map(
+        (m) => `- **${m.name || m.id}** — ${m.project || ""}${m.url ? " · " + m.url : ""}`
+      ),
       "",
       "## Consensus",
       d.summary || s.consensus || "—",

@@ -1,37 +1,54 @@
 ---
 name: council
-description: Convene the AI Agent Council for multi-stakeholder deliberation before execution
-tags: council, deliberate, vote, multi-agent
+description: Convene the multi-project AI Agent Council (Prime, Zero, Buzz, Hermes, QM, Eve, Odysseus, OpenWorker, Grok, Notebook)
+tags: council, multi-agent, hermes, agent-zero, eve, openworker
 source: bundled
 ---
 
 # Agent Council skill
 
-Use the council when the goal is **high-stakes**, **multi-domain**, or needs **adversarial review**.
+The council seats are **inspired by real open-source agent projects**. They deliberate; Vortex's autonomous chief executes.
+
+## Members
+
+| Seat | Project |
+|------|---------|
+| ♟ Prime | [Avyayalaya/agent-prime](https://github.com/Avyayalaya/agent-prime) |
+| 🖥 Zero | [agent0ai/agent-zero](https://github.com/agent0ai/agent-zero) |
+| 🐝 Buzz | [block/buzz](https://github.com/block/buzz) |
+| ☤ Hermes | [NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent) |
+| 🏢 QM | [yc-software/qm](https://github.com/yc-software/qm) |
+| 📁 Eve | [vercel/eve](https://github.com/vercel/eve) |
+| 🗺 Odysseus | [odysseus-dev/odysseus](https://github.com/odysseus-dev/odysseus) |
+| 👷 OpenWorker | [andrewyng/openworker](https://github.com/andrewyng/openworker) |
+| ⚡ Grok | [xai-org/grok-build](https://github.com/xai-org/grok-build) |
+| 📓 Notebook | research synthesizer seat |
 
 ## When to convene
 
-- Strategy + research + build + risk in one goal
-- User says deliberate / debate / council / pros and cons / should we
-- Architecture or security decisions
-- Anything where a single agent might tunnel-vision
+- Multi-domain goals (research + build + secure)
+- User says council / deliberate / debate / pros and cons
+- Architecture or quality-gate decisions
+- High-stakes plans that need adversarial review
 
 ## How
 
-1. Call `convene_council` with the full goal.
-2. Optional: pass `seats` as comma-separated ids:
-   `strategist,researcher,architect,critic,ethicist,cipher,executor`
-3. Leave `auto_execute=true` unless the user only wants a verdict.
+```
+convene_council(goal="...", auto_execute=true)
+```
 
-## Pipeline the council runs
+Optional seats filter (comma-separated ids):
+`prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook`
 
-1. **Brief** — each seat frames the goal through its lens  
-2. **Propose** — strategist / researcher / architect / executor / cipher draft plans  
-3. **Critique** — critic + ethicist + cipher red-team the plans  
-4. **Vote** — weighted approve / amend / reject  
-5. **Execute** — autonomous chief runs the consensus directive with tools  
+## Pipeline
+
+1. **Brief** — each project seat frames the goal  
+2. **Propose** — Hermes / Zero / Grok / OpenWorker / Notebook / Eve / Prime  
+3. **Critique** — Prime gate + Buzz collab + Hermes core + Eve files + Notebook evidence  
+4. **Vote** — weighted; Prime/Hermes hard-veto on harm  
+5. **Execute** — Vortex chief runs the consensus with tools  
 
 ## Do not
 
-- Do not convene the council for trivial arithmetic or single-tool tasks
-- Do not re-convene from inside a post-council executor (blocked)
+- Don't convene for trivial single-tool math unless the user asks
+- Don't re-enter council from the post-vote executor (blocked)
