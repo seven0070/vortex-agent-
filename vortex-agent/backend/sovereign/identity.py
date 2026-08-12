@@ -23,7 +23,7 @@ class IdentityManager:
                 pass
         return {
             "name": "Vortex",
-            "version": "0.4.0",
+            "version": "0.5.0",
             "role": "Ultron-style self-improving swarm agent",
             "principles": [
                 "observe → rescue → reflect → mutate → eval → promote",

@@ -1,0 +1,14 @@
+{
+  "generation_id": 0,
+  "name": "baseline_v000",
+  "notes": "Last known-good compiler without chained arithmetic or power.",
+  "score": 0.0,
+  "cases": {
+    "nl-math-multiply": {"ok": true, "value": "96"},
+    "nl-math-sum": {"ok": true, "value": "42"},
+    "fibonacci-nl": {"ok": true, "value": "55"},
+    "nl-math-product": {"ok": true, "value": "42"},
+    "reasoning-chain": {"ok": false, "value": null},
+    "power-operator": {"ok": false, "value": null}
+  }
+}

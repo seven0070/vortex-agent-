@@ -6,7 +6,7 @@ def main():
     memory = Memory()
     agent = VortexAgent(memory)
 
-    print("\n🌪️  VORTEX AGENT — Phase 4 (Full Architecture)")
+    print("\n🌪️  VORTEX AGENT — Phase 5 (Evolution Engine v1)")
     print("   Bots:", ", ".join(agent.bots.keys()))
     print("   RSI  : gen", agent.memory.current_generation())
     print("   Council:", list(agent.council.members.keys()) if agent.council else "none")
@@ -44,6 +44,8 @@ def main():
                 "  /orchestrate <goal>    run full orchestration graph\n"
                 "  /benchmark             Vortex comprehensive benchmark\n"
                 "  /observability         traces + metrics\n"
+                "  /releases              evolution releases + pointers\n"
+                "  /rollback              restore last known-good overlay\n"
                 "  anything else          chief orchestrates (add 'orchestrate:' prefix for full graph)"
             )
             continue

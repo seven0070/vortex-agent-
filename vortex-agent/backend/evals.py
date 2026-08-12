@@ -219,9 +219,21 @@ class VortexBenchmark:
                 "improved": delta >= -0.01,
             }
 
-        overall_improved = candidate.get("score",0) >= baseline.get("score",0) - 0.001
+        overall_improved = candidate.get("score", 0) > baseline.get("score", 0)
+        overall_ok = candidate.get("score", 0) >= baseline.get("score", 0)
         # check any major regression
-        regressed_cats = [k for k,v in diff.items() if not v["improved"] and abs(v["delta"]) > 0.05]
+        regressed_cats = [k for k, v in diff.items() if not v["improved"] and abs(v["delta"]) > 0.05]
+        # latency / reliability dimensions when present
+        b_lat = baseline.get("latency_ms") or 0
+        c_lat = candidate.get("latency_ms") or 0
+        latency_ok = True if not b_lat else c_lat <= b_lat * 1.25
+        reliability_ok = candidate.get("reliability", 1.0) >= baseline.get("reliability", 0.0)
+
+        decision = "reject"
+        if overall_improved and not regressed_cats and latency_ok and reliability_ok:
+            decision = "promote"
+        elif overall_ok and not regressed_cats and not overall_improved:
+            decision = "hold"
 
         return {
             "baseline_score": baseline.get("score"),
@@ -229,7 +241,9 @@ class VortexBenchmark:
             "overall_delta": round(candidate.get("score",0)-baseline.get("score",0),4),
             "diff_by_category": diff,
             "regressed": regressed_cats,
-            "decision": "promote" if overall_improved and not regressed_cats else ("promote_with_warning" if overall_improved else "reject"),
+            "latency_ok": latency_ok,
+            "reliability_ok": reliability_ok,
+            "decision": decision,
         }
 
     def format_comparison(self, comparison: dict) -> str:

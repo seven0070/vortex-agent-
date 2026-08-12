@@ -124,11 +124,14 @@ class VortexCouncil:
         # Phase 6: vote / weighted decision
         vote = self._vote(analyses, confidence_scores)
 
-        # Phase 7: resolution synthesis
+        # Phase 7: synthesis of views only — Council does not pick an executable winner.
+        # VortexResolver is the authority that selects; Governance authorizes execution.
         final = self._synthesize_final(goal, proposal, analyses, critic_notes, vote, evidence_matrix)
 
         deliberation = {
             "goal": goal,
+            "executes": False,
+            "role": "generate_views",
             "proposal": proposal,
             "analyses": analyses,
             "critic_notes": critic_notes,
@@ -166,31 +169,18 @@ class VortexCouncil:
         Each role does independent analysis.
         If agent present, delegate to bot; otherwise heuristic.
         """
-        analysis_text = ""
-        evidence = []
-        confidence = 0.6
-
-        # try delegate to underlying bot
-        prompt = f"[{role}] {ROLE_PROMPTS.get(role, '')}\nGoal: {goal}\nProposal: {proposal}\nAnalyze independently."
-
-        if self.agent and hasattr(self.agent, 'bots'):
-            bot_name = self.members[role].bot_name
-            if bot_name in self.agent.bots:
-                try:
-                    reply = self.agent.bots[bot_name].handle(prompt)
-                    analysis_text = reply
-                    evidence = [reply[:200]]
-                    confidence = 0.75 if "success" in reply.lower() or len(reply) > 50 else 0.5
-                except Exception as e:
-                    analysis_text = f"{role} analysis failed: {e}"
-                    confidence = 0.3
-            else:
-                analysis_text = f"{role} analysis (bot {bot_name} offline): heuristic for '{goal[:60]}'"
-        else:
-            # heuristic fallback
-            analysis_text = self._heuristic_role_analysis(role, goal, candidates)
-            evidence = [f"{role} heuristic evidence for {goal[:60]}"]
-            confidence = 0.6
+        # Advise-only: council generates competing views and must not execute tools.
+        analysis_text = self._heuristic_role_analysis(role, goal, candidates)
+        evidence = [f"{role} evidence for {goal[:80]}"]
+        confidence = 0.62
+        if self.memory:
+            try:
+                hits = self.memory.recall(goal, n=2) or []
+                if hits:
+                    evidence.append(str(hits[0])[:200])
+                    confidence = 0.72
+            except Exception:
+                pass
 
         return {
             "role": role,

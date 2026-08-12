@@ -36,7 +36,7 @@ async def lifespan(app: FastAPI):
     agent = VortexAgent(memory)
     yield
 
-app = FastAPI(title="Vortex Agent", version="0.4.0", lifespan=lifespan)
+app = FastAPI(title="Vortex Agent", version="0.5.0", lifespan=lifespan)
 app.add_middleware(CORSMiddleware, allow_origins=["*"],
                    allow_methods=["*"], allow_headers=["*"])
 
@@ -154,6 +154,22 @@ async def rsi_benchmark():
     vb = VortexBenchmark(agent)
     result = vb.run_comprehensive(persist=True)
     return result
+
+@app.post("/api/rsi/evolve")
+async def rsi_evolve():
+    return agent.rsi.evolution.evolve_once()
+
+@app.get("/api/rsi/releases")
+async def rsi_releases():
+    return agent.rsi.evolution.status()
+
+@app.post("/api/rsi/rollback")
+async def rsi_rollback(payload: dict = None):
+    payload = payload or {}
+    return agent.rsi.evolution.rollback.rollback(
+        reason=payload.get("reason", "manual rollback"),
+        failed_generation=payload.get("generation"),
+    )
 
 @app.get("/api/memory")
 async def memory_full(query: str = "", limit: int = 10):
