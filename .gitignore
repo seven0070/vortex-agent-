@@ -1,43 +1,36 @@
-```
-# Dependencies
-venv/
-.venv/
+# Python
 __pycache__/
-*.pyc
-*.pyo
-*.pyd
-
-# Build artifacts
-build/
-dist/
+*.py[cod]
 *.egg-info/
+.venv/
+venv/
+.Python
+dist/
+build/
+*.so
 
-# Environment files
+# Env / secrets
 .env
 .env.local
 *.env.*
 
-# Logs
-*.log
-
-# IDE/Editor
+# IDE / OS
 .vscode/
 .idea/
+.DS_Store
 *.swp
 *.swo
-*.tmp
 
-# Coverage
+# Logs / coverage
+*.log
 .coverage
-coverage/
 htmlcov/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
 
-# Python cache
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-```
+# Local Vortex runtime state
+.vortex/
+
+# Reference clones
+hermes-agent-ref/

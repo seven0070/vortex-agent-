@@ -1,0 +1,23 @@
+#!/usr/bin/env python3
+"""Vortex Agent entrypoint (Hermes-style root launcher).
+
+  python run.py              # Mission Control UI + API on :8765
+  python run.py 9000
+  python run.py cli
+  python run.py doctor
+  python run.py version
+"""
+from __future__ import annotations
+
+import sys
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+from vortex.__main__ import main  # noqa: E402
+
+
+if __name__ == "__main__":
+    main()

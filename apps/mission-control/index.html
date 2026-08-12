@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vortex Agent</title>
+  <meta name="application-name" content="Vortex Agent" />
+  <meta name="description" content="Vortex Agent — autonomous multi-agent OS with a 24-seat council chamber" />
+  <link rel="icon" href="/assets/favicon.ico" sizes="any" />
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="/assets/favicon-16.png" />
+  <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Syne:wght@500;600;700;800&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/assets/styles.css" />
+</head>
+<body>
+  <div class="bg-grid"></div>
+  <div class="bg-glow"></div>
+
+  <div class="app-shell">
+    <!-- SIDE NAV -->
+    <nav class="sidenav">
+      <div class="nav-brand">
+        <div class="logo">
+          <img src="/assets/logo.png" alt="Vortex Agent" class="logo-img" width="40" height="40" />
+        </div>
+        <div>
+          <div class="nav-title">VORTEX</div>
+          <div class="nav-sub">AGENT</div>
+        </div>
+      </div>
+
+      <div class="nav-section">Work</div>
+      <button class="nav-item active" data-view="home">
+        <span class="nav-ico">◈</span> Home
+      </button>
+      <button class="nav-item" data-view="chat">
+        <span class="nav-ico">💬</span> Chat
+      </button>
+      <button class="nav-item" data-view="missions">
+        <span class="nav-ico">⚡</span> Missions
+      </button>
+      <button class="nav-item" data-view="council">
+        <span class="nav-ico">⚖</span> Council
+      </button>
+
+      <div class="nav-section">System</div>
+      <button class="nav-item" data-view="seats">
+        <span class="nav-ico">♟</span> Seats
+      </button>
+      <button class="nav-item" data-view="tools">
+        <span class="nav-ico">🔧</span> Tools
+      </button>
+      <button class="nav-item" data-view="workspace">
+        <span class="nav-ico">📁</span> Workspace
+      </button>
+      <button class="nav-item" data-view="settings">
+        <span class="nav-ico">⚙</span> Settings
+      </button>
+
+      <div class="nav-footer">
+        <div class="pill" id="pill-health"><i></i> connecting</div>
+        <div class="nav-meta" id="nav-version">v—</div>
+      </div>
+    </nav>
+
+    <!-- MAIN -->
+    <div class="main-col">
+      <header class="topbar">
+        <div>
+          <h1 id="view-title">Home</h1>
+          <p class="tag" id="view-tag">Autonomous multi-agent OS · council chamber</p>
+        </div>
+        <div class="status-pills">
+          <span class="pill dim" id="pill-provider">brain: —</span>
+          <span class="pill dim" id="pill-bots">bots: —</span>
+          <span class="pill dim" id="pill-seats">seats: —</span>
+          <span class="pill dim" id="pill-ws">ws: off</span>
+        </div>
+      </header>
+
+      <!-- HOME -->
+      <section class="view active" id="view-home">
+        <div class="hero-grid">
+          <div class="hero-card primary-card">
+            <div class="hero-brand-row">
+              <img src="/assets/logo.png" alt="" class="hero-logo" width="72" height="72" />
+              <div class="hero-kicker">Put Vortex to work</div>
+            </div>
+            <h2>Launch a mission or convene the council</h2>
+            <p class="hero-copy">
+              Solo missions run the autonomous chief. Council mode seats 24 project agents,
+              votes, then dispatches chamber workers in parallel.
+            </p>
+            <textarea id="home-goal" rows="3" placeholder="e.g. Research multi-agent systems and write a report…"></textarea>
+            <div class="action-row">
+              <button class="primary" id="btn-home-council">⚖ Convene Council</button>
+              <button class="secondary" id="btn-home-solo">⚡ Solo Mission</button>
+              <button class="ghost" id="btn-home-chat">Open Chat</button>
+            </div>
+            <div class="chips" id="home-chips">
+              <button data-goal="Research autonomous multi-agent systems and write a structured report">Research report</button>
+              <button data-goal="Calculate fibonacci(30) and benchmark it">Benchmark fib(30)</button>
+              <button data-goal="List workspace files and summarize what is there">Inspect workspace</button>
+              <button data-goal="Hide payload 'vortex-live' inside a friendly weather message">Stego hide</button>
+              <button data-goal="Get system info: uname, whoami, disk">System intel</button>
+            </div>
+          </div>
+
+          <div class="hero-side">
+            <div class="stat-grid" id="home-stats"></div>
+            <div class="panel soft">
+              <div class="section-head"><h2>Live status</h2></div>
+              <div id="home-status" class="home-status">Standing by.</div>
+              <div class="mini-trace" id="home-trace"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="two-col">
+          <div class="panel">
+            <div class="section-head">
+              <h2>Recent missions</h2>
+              <button class="ghost" data-goto="missions">View all</button>
+            </div>
+            <ul class="mission-list" id="home-missions"></ul>
+          </div>
+          <div class="panel">
+            <div class="section-head">
+              <h2>Council seats</h2>
+              <button class="ghost" data-goto="seats">All seats</button>
+            </div>
+            <div class="seat-grid compact" id="home-seats"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CHAT -->
+      <section class="view" id="view-chat">
+        <div class="chat-layout">
+          <div class="panel chat-main">
+            <div class="chat-log" id="chat-log">
+              <div class="chat-empty">
+                <div class="pulse-ring"></div>
+                <p>Talk to the chief. Complex goals auto-route to the council.</p>
+              </div>
+            </div>
+            <form class="chat-form" id="chat-form">
+              <input id="chat-input" placeholder="Message Vortex Agent…  (/council <goal>  ·  /auto <goal>)" autocomplete="off" />
+              <button type="submit" class="primary">Send</button>
+            </form>
+          </div>
+          <aside class="panel chat-side">
+            <div class="section-head"><h2>Quick prompts</h2></div>
+            <div class="chips vertical" id="chat-chips">
+              <button data-msg="who are you">Who are you?</button>
+              <button data-msg="/seats">List council seats</button>
+              <button data-msg="/auto Calculate 12*12">Solo: 12×12</button>
+              <button data-msg="/council Research multi-agent councils and write a short report">Council research</button>
+              <button data-msg="Get system info: uname, whoami, disk">System intel</button>
+            </div>
+            <div class="section-head" style="margin-top:18px"><h2>Tips</h2></div>
+            <ul class="tip-list">
+              <li><code>/auto &lt;goal&gt;</code> force solo mission</li>
+              <li><code>/council &lt;goal&gt;</code> full chamber run</li>
+              <li><code>@researcher …</code> address a bot</li>
+            </ul>
+          </aside>
+        </div>
+      </section>
+
+      <!-- MISSIONS -->
+      <section class="view" id="view-missions">
+        <div class="split">
+          <div class="panel">
+            <div class="section-head">
+              <h2>Launch</h2>
+            </div>
+            <textarea id="mission-goal" rows="4" placeholder="Mission goal…"></textarea>
+            <div class="composer-meta">
+              <label class="steps-label">max steps
+                <input type="number" id="max-steps" value="12" min="1" max="25" />
+              </label>
+            </div>
+            <div class="action-row">
+              <button class="primary" id="btn-launch">⚡ Launch Solo</button>
+              <button class="secondary" id="btn-launch-council">⚖ Via Council</button>
+              <button class="danger ghost" id="btn-cancel" disabled>Cancel</button>
+            </div>
+            <div class="section-head" style="margin-top:16px">
+              <h2>History</h2>
+              <button class="ghost" id="btn-refresh-missions">↻</button>
+            </div>
+            <ul class="mission-list" id="mission-list"></ul>
+          </div>
+          <div class="panel flex-col">
+            <div class="section-head">
+              <h2>Live Trace</h2>
+              <span class="muted" id="active-mission-label">no active mission</span>
+            </div>
+            <div class="trace" id="trace">
+              <div class="trace-empty">
+                <div class="pulse-ring"></div>
+                <p>Launch a mission to watch think → tool → observe in real time.</p>
+              </div>
+            </div>
+            <div class="result-panel" id="result-panel" hidden>
+              <div class="section-head">
+                <h2>Result</h2>
+                <button class="ghost" id="btn-copy-result">Copy</button>
+              </div>
+              <pre id="result-body"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COUNCIL -->
+      <section class="view" id="view-council">
+        <div class="split">
+          <div class="panel">
+            <div class="section-head"><h2>Convene</h2></div>
+            <textarea id="council-goal" rows="4" placeholder="High-stakes or multi-domain goal for the full council…"></textarea>
+            <label class="check-row">
+              <input type="checkbox" id="use-chamber" checked />
+              Run Council Chamber (parallel seat workers)
+            </label>
+            <div class="action-row">
+              <button class="primary" id="btn-council">⚖ Convene Council</button>
+              <button class="danger ghost" id="btn-council-cancel" disabled>Cancel</button>
+            </div>
+            <div class="section-head" style="margin-top:16px">
+              <h2>Sessions</h2>
+              <button class="ghost" id="btn-refresh-council">↻</button>
+            </div>
+            <ul class="mission-list" id="council-list"></ul>
+          </div>
+          <div class="panel flex-col">
+            <div class="section-head">
+              <h2>Chamber</h2>
+              <span class="muted" id="council-active-label">idle</span>
+            </div>
+            <div class="tally-bar" id="tally-bar" hidden></div>
+            <div class="trace" id="council-trace">
+              <div class="trace-empty">
+                <div class="pulse-ring"></div>
+                <p>Council briefs → proposes → critiques → votes → chamber workers execute.</p>
+              </div>
+            </div>
+            <div class="result-panel" id="council-result-panel" hidden>
+              <div class="section-head">
+                <h2>Verdict</h2>
+                <button class="ghost" id="btn-copy-council">Copy</button>
+              </div>
+              <pre id="council-result-body"></pre>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SEATS -->
+      <section class="view" id="view-seats">
+        <div class="panel">
+          <div class="section-head">
+            <h2>24 Council seats</h2>
+            <span class="muted" id="seat-count">0</span>
+          </div>
+          <div class="seat-grid" id="seat-grid"></div>
+        </div>
+        <div class="panel" style="margin-top:16px">
+          <div class="section-head"><h2>Swarm bots</h2></div>
+          <ul class="bot-list" id="bot-list"></ul>
+        </div>
+      </section>
+
+      <!-- TOOLS -->
+      <section class="view" id="view-tools">
+        <div class="panel">
+          <div class="section-head">
+            <h2>Tool belt</h2>
+            <span class="muted" id="tool-count">0</span>
+          </div>
+          <ul class="tool-list big" id="tool-list"></ul>
+        </div>
+      </section>
+
+      <!-- WORKSPACE -->
+      <section class="view" id="view-workspace">
+        <div class="panel">
+          <div class="section-head">
+            <h2>Workspace</h2>
+            <button class="ghost" id="btn-refresh-workspace">↻</button>
+          </div>
+          <p class="muted" id="workspace-path">~/.vortex/workspace</p>
+          <div id="workspace-body" class="workspace-body">
+            <p class="muted">Workspace paths appear after missions write artifacts. Council outputs live under <code>council/&lt;id&gt;/FINAL.md</code>.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings">
+        <div class="panel">
+          <div class="section-head"><h2>Vortex Agent</h2></div>
+          <div class="settings-grid" id="settings-grid"></div>
+        </div>
+        <div class="panel" style="margin-top:16px">
+          <div class="section-head"><h2>How to work</h2></div>
+          <ul class="tip-list">
+            <li>Solo missions for simple tool goals (calc, files, stego).</li>
+            <li>Council for multi-domain / high-stakes goals.</li>
+            <li>Chamber workers write to <code>~/.vortex/workspace/council/</code>.</li>
+            <li>Optional: set <code>OPENAI_API_KEY</code> or <code>ANTHROPIC_API_KEY</code> for a live LLM brain.</li>
+          </ul>
+        </div>
+      </section>
+
+      <footer class="footer">
+        <span>Vortex Agent · plan → act → observe · council chamber</span>
+        <span id="footer-ws">realtime offline</span>
+      </footer>
+    </div>
+  </div>
+
+  <script src="/assets/app.js"></script>
+</body>
+</html>

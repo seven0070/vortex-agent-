@@ -1,0 +1,25 @@
+# Vortex Agent config example (Hermes cli-config.yaml.example counterpart)
+product: Vortex Agent
+version: "2.1.0"
+
+brain:
+  provider: offline   # offline | openai | anthropic | openai_compat
+  model: ""
+
+council:
+  use_chamber: true
+  max_workers: 6
+  steps_per_worker: 6
+
+agent:
+  max_steps: 12
+  default_toolsets:
+    - full
+
+gateway:
+  host: "0.0.0.0"
+  port: 8765
+
+workspace:
+  # relative to VORTEX_HOME
+  path: workspace

@@ -1,0 +1,7 @@
+recursive-include apps/mission-control *
+recursive-include skills *
+recursive-include vortex/data *
+recursive-include assets *
+include LICENSE README.md AGENTS.md requirements.txt
+include cli-config.yaml.example .env.example
+include bin/vortex scripts/build.sh
