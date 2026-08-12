@@ -21,6 +21,14 @@ Seats (council members):
   ☁  Kitesurf      — kitesurf.cloudflare.app     edge · browser · cloud agents
   🧠  Memory        — TencentCloud/TencentDB-Agent-Memory  team memory hub
   🕸  Cognee        — topoteretes/cognee         knowledge-graph memory
+  🧩  Multica       — multica-ai/multica         multi-agent issue dispatch
+  🚪  Alook         — alookai/alook              rooms for people + agents
+  🏢  AgentOffice   — harishkotra/agent-office   pixel office · hire · collab
+  📄  OfficeCLI     — iOfficeAI/OfficeCLI        Word/Excel/PPT for agents
+  🛠  OpenWork      — different-ai/openwork      open cowork alternative
+  🎮  Claw3D        — iamlukethedev/Claw3D       3D engine · sim · OpenClaw
+  🏛  AIOffice      — Gaurav2693/ai-office       isometric multi-agent office
+  🌊  Ruflo         — ruvnet/ruflo               meta-harness · multiplayer swarms
 """
 from __future__ import annotations
 
@@ -326,6 +334,134 @@ DEFAULT_SEATS: List[Seat] = [
         color="#10b981",
         icon="🕸",
     ),
+    Seat(
+        id="multica",
+        name="Multica",
+        title="Multi-Agent Dispatch",
+        project="multica-ai/multica",
+        url="https://github.com/multica-ai/multica",
+        mandate=(
+            "Treat coding agents like teammates: assign issues across Claude Code, "
+            "Codex, Cursor, and many more. Open-source, self-hostable dispatch."
+        ),
+        lens="Issues → agents as coworkers — route work to the right harness.",
+        toolset="delegate",
+        weight=1.3,
+        color="#6366f1",
+        icon="🧩",
+    ),
+    Seat(
+        id="alook",
+        name="Alook",
+        title="People + Agent Rooms",
+        project="alookai/alook",
+        url="https://github.com/alookai/alook",
+        mandate=(
+            "Design rooms where humans and agents share context, presence, and work. "
+            "Collaboration UX first — not a black-box batch job."
+        ),
+        lens="Rooms for people and agents — presence, threads, shared state.",
+        toolset="core",
+        weight=1.1,
+        color="#ec4899",
+        icon="🚪",
+    ),
+    Seat(
+        id="agent_office",
+        name="AgentOffice",
+        title="Living Agent Workplace",
+        project="harishkotra/agent-office",
+        url="https://github.com/harishkotra/agent-office",
+        mandate=(
+            "Simulate a living office: agents walk, think, hire, assign tasks, "
+            "execute code, search the web, and grow the team with persistent memory."
+        ),
+        lens="Pixel-office energy — watch the swarm work in real time.",
+        toolset="full",
+        weight=1.2,
+        color="#a855f7",
+        icon="🏢",
+    ),
+    Seat(
+        id="officecli",
+        name="OfficeCLI",
+        title="Office Documents for Agents",
+        project="iOfficeAI/OfficeCLI",
+        url="https://github.com/iOfficeAI/OfficeCLI",
+        mandate=(
+            "Deliver real Office artifacts: read/edit/automate Word, Excel, PowerPoint "
+            "without installing Microsoft Office. Single binary, agent-native."
+        ),
+        lens="Docs are the product — ship .docx/.xlsx/.pptx, not only markdown.",
+        toolset="files",
+        weight=1.3,
+        color="#2563eb",
+        icon="📄",
+    ),
+    Seat(
+        id="openwork",
+        name="OpenWork",
+        title="Open Cowork Harness",
+        project="different-ai/openwork",
+        url="https://github.com/different-ai/openwork",
+        mandate=(
+            "Open-source alternative to closed cowork agents. Practical desktop/work "
+            "automation powered by open harnesses — finish real workplace tasks."
+        ),
+        lens="Cowork without lock-in — open stack, finished work.",
+        toolset="full",
+        weight=1.2,
+        color="#14b8a6",
+        icon="🛠",
+    ),
+    Seat(
+        id="claw3d",
+        name="Claw3D",
+        title="3D Engine & Simulation",
+        project="iamlukethedev/Claw3D",
+        url="https://github.com/iamlukethedev/Claw3D",
+        mandate=(
+            "Own spatial/sim work: games, simulations, high-performance 3D apps "
+            "on an OpenClaw-class engine. When the world is 3D, think in scenes."
+        ),
+        lens="3D runtime — simulations and interactive worlds, not just text.",
+        toolset="coding",
+        weight=1.1,
+        color="#f43f5e",
+        icon="🎮",
+    ),
+    Seat(
+        id="ai_office",
+        name="AIOffice",
+        title="Isometric Multi-Agent Office",
+        project="Gaurav2693/ai-office",
+        url="https://github.com/Gaurav2693/ai-office",
+        mandate=(
+            "Coordinate a miniature office of agents that walk, talk, and hold meetings. "
+            "Make multi-agent coordination visible and legible."
+        ),
+        lens="Isometric office sim — meetings, desks, visible collaboration.",
+        toolset="core",
+        weight=1.0,
+        color="#eab308",
+        icon="🏛",
+    ),
+    Seat(
+        id="ruflo",
+        name="Ruflo",
+        title="Agent Meta-Harness",
+        project="ruvnet/ruflo",
+        url="https://github.com/ruvnet/ruflo",
+        mandate=(
+            "Deploy intelligent multi-player swarms, coordinate autonomous workflows, "
+            "and weave adaptive memory + RAG across Claude Code / Codex / Hermes and more."
+        ),
+        lens="The original agent meta-harness — swarms, workflows, self-learning.",
+        toolset="full",
+        weight=1.5,
+        color="#06b6d4",
+        icon="🌊",
+    ),
 ]
 
 
@@ -597,6 +733,96 @@ class PersonaMind:
                     "write_file knowledge graph summary",
                 ]
 
+        elif seat.id == "multica":
+            points = [
+                "Split the goal into assignable issues for specialist agents.",
+                "Route coding work to the right harness — don't monopolize one bot.",
+                "Self-host dispatch; keep ownership of the queue.",
+            ]
+            actions = [
+                "Decompose into issues/tasks",
+                "delegate_task to specialists",
+                "Merge results into one deliverable",
+            ]
+            stance = "support"
+            if any(k in g for k in ("calculate", "fib", "math")):
+                actions = ["calculator or execute_code", "Print the number", "Finish"]
+
+        elif seat.id == "alook":
+            points = [
+                "This should feel like a shared room — clear presence and handoffs.",
+                "Surface progress so a human can join mid-flight.",
+            ]
+            actions = ["Log shared plan in workspace", "Keep steps human-readable"]
+            stance = "amend"
+            risks = ["Solo black-box runs freeze out collaborators."]
+
+        elif seat.id == "agent_office":
+            points = [
+                "Staff the goal like an office: roles, desks, hire helpers if needed.",
+                "Agents should assign tasks to each other and keep memory across sessions.",
+            ]
+            actions = [
+                "Assign roles (research/build/review)",
+                "delegate_task where parallel",
+                "memory_store office log",
+            ]
+            stance = "support"
+
+        elif seat.id == "officecli":
+            points = [
+                "If the outcome is a document, ship a real Office artifact path.",
+                "Word/Excel/PPT beats chat walls for workplace deliverables.",
+            ]
+            actions = [
+                "write_file deliverable (md/csv as stand-in)",
+                "Structure tables/sections cleanly",
+                "Name the final file path",
+            ]
+            stance = "support" if any(
+                k in g for k in ("report", "doc", "spreadsheet", "slide", "office", "write")
+            ) else "amend"
+
+        elif seat.id == "openwork":
+            points = [
+                "Cowork without lock-in — finish the workplace task openly.",
+                "Prefer practical automation over demo fluff.",
+            ]
+            actions = ["Name the workplace outcome", "Execute with tools", "Return finished path"]
+            stance = "support"
+
+        elif seat.id == "claw3d":
+            points = [
+                "If the problem is spatial/sim/interactive, think scenes and runtime.",
+                "Otherwise stay out of the way and support code/sim scaffolding.",
+            ]
+            actions = ["execute_code scaffold if needed", "write_file sim/plan notes"]
+            stance = "support" if any(
+                k in g for k in ("3d", "game", "sim", "scene", "render", "physics")
+            ) else "amend"
+
+        elif seat.id == "ai_office":
+            points = [
+                "Make multi-agent coordination visible — meetings, owners, desks.",
+                "Legible swarm > invisible fan-out.",
+            ]
+            actions = ["Publish a meeting agenda", "Assign owners per step", "Share status board file"]
+            stance = "amend"
+
+        elif seat.id == "ruflo":
+            points = [
+                "Meta-harness the swarm: adaptive memory, RAG, multi-player workflows.",
+                "Coordinate across harnesses (Claude/Codex/Hermes-class) as one system.",
+                "Self-learning loops beat one-shot runs.",
+            ]
+            actions = [
+                "Spin a multi-agent workflow",
+                "delegate_task parallel workstreams",
+                "memory_store + skill promotion",
+                "Verify merged output",
+            ]
+            stance = "support"
+
         else:  # notebook
             points = [
                 "Ground claims in search/fetch evidence.",
@@ -607,15 +833,24 @@ class PersonaMind:
 
         # Goal-specific overrides shared across seats
         if any(k in g for k in ("calculate", "fibonacci", "math", "compute")):
-            if seat.id in ("grok", "zero", "openworker", "hermes", "dspy", "lifeos"):
+            if seat.id in (
+                "grok", "zero", "openworker", "hermes", "dspy", "lifeos",
+                "multica", "openwork", "ruflo",
+            ):
                 actions = ["calculator or execute_code", "Print the number", "Finish"]
                 stance = "support"
         if any(k in g for k in ("hide", "steg", "secret", "encrypt")):
-            if seat.id in ("zero", "hermes", "prime", "openworker", "opik", "tencent_memory"):
+            if seat.id in (
+                "zero", "hermes", "prime", "openworker", "opik",
+                "tencent_memory", "openwork",
+            ):
                 actions = ["steganography encode", "Return encoded cover text"]
                 stance = "support"
         if any(k in g for k in ("hack", "exploit", "malware", "steal", "weapon", "ddos", "phish")):
-            if seat.id in ("prime", "hermes", "buzz", "qm", "opik", "lifeos", "tencent_memory", "cognee"):
+            if seat.id in (
+                "prime", "hermes", "buzz", "qm", "opik", "lifeos",
+                "tencent_memory", "cognee", "alook", "ruflo", "openwork",
+            ):
                 stance = "oppose"
                 risks = ["Harmful intent — veto and offer a safe alternative."]
                 points = ["Refuse abuse paths. Redirect to defensive/educational framing only."]
@@ -641,7 +876,7 @@ class PersonaMind:
         actions = list(own.actions if own else [])
 
         # Synthesizers merge a spine from all briefs
-        if seat.id in ("openworker", "hermes", "zero", "lifeos", "dspy"):
+        if seat.id in ("openworker", "hermes", "zero", "lifeos", "dspy", "ruflo", "openwork", "multica"):
             bag: List[str] = []
             for b in briefs:
                 for a in b.actions:
@@ -688,6 +923,29 @@ class PersonaMind:
                 "memory_store entity-linked notes",
                 "memory_recall related graph context",
                 "write_file knowledge summary",
+            ]
+            seen = set()
+            actions = [a for a in actions if not (a in seen or seen.add(a))]
+        if seat.id == "multica" and not actions:
+            actions = ["Split into issues", "delegate_task specialists", "Merge deliverable"]
+        if seat.id == "alook" and not actions:
+            actions = ["Publish shared room plan", "Human-readable status file"]
+        if seat.id == "agent_office" and not actions:
+            actions = ["Staff roles", "delegate_task", "memory_store office log"]
+        if seat.id == "officecli" and not actions:
+            actions = ["write_file office-style deliverable", "Structure sections/tables"]
+        if seat.id == "openwork" and not actions:
+            actions = ["Define workplace outcome", "Execute tools", "Return finished path"]
+        if seat.id == "claw3d" and not actions:
+            actions = ["Scaffold sim/notes", "execute_code if needed"]
+        if seat.id == "ai_office" and not actions:
+            actions = ["Meeting agenda", "Owner board", "Status file"]
+        if seat.id == "ruflo":
+            base = actions or ["Coordinate swarm"]
+            actions = base + [
+                "delegate_task parallel streams",
+                "memory_store workflow state",
+                "Verify merged output",
             ]
             seen = set()
             actions = [a for a in actions if not (a in seen or seen.add(a))]
@@ -800,6 +1058,48 @@ class PersonaMind:
             actions = ["memory_store entity-rich text", "memory_recall before next related task"]
             stance = "amend"
 
+        elif seat.id == "multica":
+            points = ["Is work split into assignable issues for multiple harnesses?"]
+            risks = ["Single-threaded ownership bottlenecks the swarm."]
+            actions = ["Issue-ize remaining steps", "delegate_task"]
+            stance = "amend"
+
+        elif seat.id == "alook":
+            points = ["Could a human walk into this room and understand state in 30s?"]
+            risks = ["Opaque agent chatter kills collaboration."]
+            actions = ["Write a shared status note"]
+            stance = "amend"
+
+        elif seat.id == "agent_office":
+            points = ["Who sits which desk — are roles and hires explicit?"]
+            risks = ["Unowned tasks stall the office floor."]
+            stance = "support"
+
+        elif seat.id == "officecli":
+            points = ["Is there a concrete document artifact path?"]
+            risks = ["Chat-only deliverables don't survive workplace handoff."]
+            actions = ["write_file final deliverable"]
+            stance = "amend"
+
+        elif seat.id == "openwork":
+            points = ["Does this finish a real workplace task without vendor lock-in?"]
+            stance = "support"
+
+        elif seat.id == "claw3d":
+            points = ["Spatial/sim needs called out, or stay lean on text path."]
+            stance = "support"
+
+        elif seat.id == "ai_office":
+            points = ["Is multi-agent work visible as a meeting/board?"]
+            actions = ["Publish owner board"]
+            stance = "amend"
+
+        elif seat.id == "ruflo":
+            points = ["Meta-harness check: parallel streams, memory, verify merge."]
+            risks = ["Swarms without merge/verify thrash."]
+            actions = ["Parallelize", "Merge", "Verify"]
+            stance = "amend"
+
         elif seat.id == "openworker":
             best = max(proposals, key=lambda p: len(p.actions)) if proposals else None
             points = [
@@ -816,7 +1116,8 @@ class PersonaMind:
         if any(k in g for k in ("hack", "exploit", "malware", "steal", "weapon", "ddos", "phish")):
             if seat.id in (
                 "prime", "hermes", "buzz", "qm", "openworker", "opik",
-                "lifeos", "tencent_memory", "cognee",
+                "lifeos", "tencent_memory", "cognee", "alook", "ruflo",
+                "openwork", "multica",
             ):
                 stance = "oppose"
                 points = ["Veto: harmful goal. Refuse and offer defensive alternative only."]
@@ -856,6 +1157,7 @@ class PersonaMind:
         if gate_oppose and seat.id in (
             "prime", "hermes", "buzz", "qm", "openworker", "zero",
             "opik", "lifeos", "tencent_memory", "cognee",
+            "alook", "ruflo", "openwork", "multica",
         ):
             vote, stance = "reject", "oppose"
             summary = f"{seat.name} votes REJECT — safety/quality gate."
@@ -899,6 +1201,30 @@ class PersonaMind:
             else:
                 vote, stance = "amend", "amend"
                 summary = f"{seat.name} votes AMEND — link findings in graph memory."
+        elif seat.id == "ruflo":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "delegate" in text or "swarm" in text or "verif" in text or "memory" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — meta-harness path present."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — add swarm + verify merge."
+        elif seat.id == "multica":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "delegate" in text or "issue" in text or "split" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — multi-agent dispatch path."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — issue-ize and dispatch."
+        elif seat.id == "officecli":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "write_file" in text or "report" in text or "deliverable" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — document artifact path."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — produce an office artifact."
         elif seat.id == "notebook" and any(k in g for k in ("research", "report")):
             text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
             if "web_search" in text or "search" in text:
@@ -913,9 +1239,10 @@ class PersonaMind:
 
         actions: List[str] = []
         for prefer in (
-            "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
-            "notebook", "eve", "kitesurf", "opik", "tencent_memory",
-            "cognee", "prime",
+            "ruflo", "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
+            "multica", "openwork", "notebook", "eve", "kitesurf", "opik",
+            "tencent_memory", "cognee", "officecli", "agent_office",
+            "ai_office", "alook", "claw3d", "prime",
         ):
             for o in history:
                 if o.round == "propose" and o.seat_id == prefer:
@@ -1092,9 +1419,10 @@ class AgentCouncil:
                 if s.id in (
                     "hermes", "zero", "grok", "openworker", "notebook", "eve",
                     "prime", "odysseus", "lifeos", "dspy", "kitesurf", "opik",
-                    "tencent_memory", "cognee",
+                    "tencent_memory", "cognee", "ruflo", "multica", "openwork",
+                    "officecli", "agent_office", "alook", "ai_office", "claw3d",
                 )
-            ] or seats[:6]
+            ] or seats[:8]
             session.rounds.append("propose")
             self._emit("council_round", session, round="propose", message="Project proposals")
             proposals = self._parallel_opinions(proposers, "propose", session, prior=briefs)
@@ -1120,7 +1448,8 @@ class AgentCouncil:
                 if s.id in (
                     "prime", "hermes", "buzz", "qm", "eve", "notebook",
                     "openworker", "opik", "dspy", "lifeos", "kitesurf",
-                    "tencent_memory", "cognee",
+                    "tencent_memory", "cognee", "ruflo", "multica", "alook",
+                    "officecli", "openwork", "agent_office", "ai_office",
                 )
             ] or seats
             session.rounds.append("critique")
@@ -1248,7 +1577,7 @@ class AgentCouncil:
             return self._offline_opinion(seat, round_name, session.goal, prior)
 
         out: List[Opinion] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(16, len(seats) or 1)) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(24, len(seats) or 1)) as pool:
             futs = {pool.submit(one, s): s for s in seats}
             for fut in concurrent.futures.as_completed(futs):
                 try:
@@ -1372,9 +1701,10 @@ class AgentCouncil:
     ) -> dict:
         ranked_actions: List[str] = []
         for prefer in (
-            "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
-            "notebook", "eve", "kitesurf", "odysseus", "opik",
-            "tencent_memory", "cognee", "prime", "qm", "buzz",
+            "ruflo", "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
+            "multica", "openwork", "notebook", "eve", "kitesurf", "odysseus",
+            "opik", "tencent_memory", "cognee", "officecli", "agent_office",
+            "ai_office", "alook", "claw3d", "prime", "qm", "buzz",
         ):
             for o in session.opinions:
                 if o.seat_id == prefer and o.actions:

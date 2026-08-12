@@ -92,7 +92,8 @@ registry.register(
                 "type": "string",
                 "description": "Optional comma-separated seat ids "
                 "(prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook,"
-                "lifeos,opik,dspy,kitesurf,tencent_memory,cognee)",
+                "lifeos,opik,dspy,kitesurf,tencent_memory,cognee,"
+                "multica,alook,agent_office,officecli,openwork,claw3d,ai_office,ruflo)",
             },
             "auto_execute": {
                 "type": "boolean",

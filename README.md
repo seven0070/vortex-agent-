@@ -6,7 +6,7 @@ Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspire
 
 ### Agent Council — members *are* the agent projects
 
-Sixteen weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex's autonomous chief executes**.
+Twenty-four weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex's autonomous chief executes**.
 
 | | Seat | Project | Mandate |
 |---|------|---------|---------|
@@ -26,9 +26,17 @@ Sixteen weighted seats, each embodying a real open-source agent stack. They deli
 | ☁ | **Kitesurf** | [kitesurf.cloudflare.app](https://kitesurf.cloudflare.app) | Edge · browser · cloud agents |
 | 🧠 | **Memory** | [TencentCloud/TencentDB-Agent-Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) | Team memory hub · skills · wiki · code-graph |
 | 🕸 | **Cognee** | [topoteretes/cognee](https://github.com/topoteretes/cognee) | Knowledge-graph long-term memory |
+| 🧩 | **Multica** | [multica-ai/multica](https://github.com/multica-ai/multica) | Multi-agent issue dispatch |
+| 🚪 | **Alook** | [alookai/alook](https://github.com/alookai/alook) | Rooms for people + agents |
+| 🏢 | **AgentOffice** | [harishkotra/agent-office](https://github.com/harishkotra/agent-office) | Living pixel-office swarm |
+| 📄 | **OfficeCLI** | [iOfficeAI/OfficeCLI](https://github.com/iOfficeAI/OfficeCLI) | Word/Excel/PPT for agents |
+| 🛠 | **OpenWork** | [different-ai/openwork](https://github.com/different-ai/openwork) | Open cowork harness |
+| 🎮 | **Claw3D** | [iamlukethedev/Claw3D](https://github.com/iamlukethedev/Claw3D) | 3D engine · simulation |
+| 🏛 | **AIOffice** | [Gaurav2693/ai-office](https://github.com/Gaurav2693/ai-office) | Isometric multi-agent office |
+| 🌊 | **Ruflo** | [ruvnet/ruflo](https://github.com/ruvnet/ruflo) | Meta-harness · multiplayer swarms |
 
 Pipeline: **brief → propose → critique → vote → chief executes**.  
-Prime + Hermes hold a **hard veto** on harmful goals. Opik demands traces/evals; DSPy demands modular steps; LifeOS demands Ideal-State progress; **Memory** demands team assets; **Cognee** demands graph-linked recall.
+Prime + Hermes hold a **hard veto** on harmful goals. Opik demands traces/evals; DSPy demands modular steps; LifeOS demands Ideal-State progress; **Memory** demands team assets; **Cognee** demands graph-linked recall. **Multica/Ruflo** demand multi-agent dispatch; **OfficeCLI** demands real document artifacts; **Alook/AIOffice** demand human-visible rooms.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -88,7 +96,7 @@ Without keys, the **offline planner** still runs full multi-step missions.
 
 - **Autonomous missions** — goal in, plan → act → observe until done
 - **Live trace** — WebSocket + SSE thought/tool/observation stream
-- **Agent Council** — 16 project seats deliberate, then chief executes
+- **Agent Council** — 24 project seats deliberate, then chief executes
 - **Swarm** — chief · researcher · architect · cipher · scout (role toolsets)
 - **Skills** — bundled `SKILL.md` playbooks + auto-learned skills from successful runs
 - **Memory** — SQLite sessions, FTS5 search, vector recall, `MEMORY.md`

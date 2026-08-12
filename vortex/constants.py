@@ -5,8 +5,8 @@ import os
 from pathlib import Path
 
 NAME = "Vortex"
-VERSION = "1.4.0"
-TAGLINE = "Autonomous chief + 16-seat multi-project Agent Council"
+VERSION = "1.5.0"
+TAGLINE = "Autonomous chief + 24-seat multi-project Agent Council"
 
 VORTEX_HOME = Path(os.environ.get("VORTEX_HOME", Path.home() / ".vortex")).expanduser()
 WORKSPACE = VORTEX_HOME / "workspace"
