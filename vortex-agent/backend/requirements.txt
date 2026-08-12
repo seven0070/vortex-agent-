@@ -1,5 +1,8 @@
 fastapi==0.110.0
 uvicorn==0.27.1
 pydantic==2.6.1
-chromadb==0.4.22
 # chromadb is OPTIONAL — if install fails, vector memory falls back to a local store
+# chromadb==0.4.22
+
+# Optional LLM providers (set OPENAI_API_KEY or ANTHROPIC_API_KEY)
+# No extra packages required — uses stdlib urllib.

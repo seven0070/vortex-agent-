@@ -1,6 +1,8 @@
-"""Vortex swarm: VortexAgent (the OS) + VortexBot (teammates)."""
+"""Vortex swarm: VortexAgent (the OS) + VortexBot (teammates) + autonomy."""
+from __future__ import annotations
+
 import re
-from tools import TOOL_CLASSES, ToolResult
+from tools import TOOL_CLASSES, ToolResult, build_toolbelt, run_tool
 
 CODE_BLOCK = re.compile(r"```(?:python)?\s*(.*?)```", re.S)
 
@@ -44,6 +46,9 @@ class VortexBot:
         self.name = name
         self.role = role
         self.tools = {t.name: t for t in TOOL_CLASSES}
+        # also expose extended tools from the shared belt
+        for n, t in agent.toolbelt.items():
+            self.tools.setdefault(n, t)
         self.message_count = 0
 
     # ── entry point ──
@@ -63,14 +68,20 @@ class VortexBot:
                 reply = self._role_reply(message, ctx)
 
         self.agent.memory.save_message(f"bot:{self.name}", reply)
-        self.agent.vector.remember(f"[{self.name}/{self.role}] {message} -> {reply[:200]}")
+        self.agent.vector.remember(
+            f"[{self.name}/{self.role}] {message} -> {reply[:200]}"
+        )
         return reply
 
     # ── chief: plan + delegate + merge ──
     def _chief(self, message):
-        low = message.lower()
+        low = message.lower().strip()
 
-        # Phase-1 slash commands, routed to specialists
+        # Kick the full autonomous loop for goal-style requests
+        if low.startswith("/auto ") or low.startswith("/mission "):
+            goal = message.split(" ", 1)[1].strip()
+            return self._run_autonomous(goal)
+
         if low.startswith("/translate"):
             return self._delegate("cipher", message)
         if low.startswith("/run"):
@@ -79,12 +90,20 @@ class VortexBot:
             return self._delegate("cipher", message)
 
         plan = self._plan(message)
+        # Complex / multi-step goals → autonomous agent
+        if self._wants_autonomy(low, plan):
+            return self._run_autonomous(message)
+
         if not plan:
-            return ("🌪️ Chief here. I coordinate the swarm: researcher, architect, cipher. "
-                    "Give me a task that spans research/build/security and I'll delegate and merge.")
+            return (
+                "🌪️ Chief online. I coordinate the swarm and can run fully "
+                "autonomous missions.\n"
+                "  • Give me a goal (research / build / secure / calculate)\n"
+                "  • Or `/auto <goal>` to force the autonomous loop\n"
+                "  • Bots: researcher · architect · cipher · scout"
+            )
 
         parts, findings = [], []
-        # run non-cipher bots first
         for bot_name, task in plan:
             if bot_name == "cipher":
                 continue
@@ -92,13 +111,11 @@ class VortexBot:
             parts.append((bot_name, sub))
             findings.append(sub)
 
-        # cipher secures the combined findings
         if any(b == "cipher" for b, _ in plan):
             payload = " FINDINGS: " + " | ".join(findings)[:400]
             sub = self._delegate("cipher", "hide" + payload)
             parts.append(("cipher", sub))
 
-        # save the successful delegation as a shared skill
         self.agent.skills.save(
             "multi_bot_analysis",
             "Delegate analysis + build + secure across the swarm, then merge.",
@@ -108,16 +125,66 @@ class VortexBot:
         merged = "\n\n".join(f"━━ [{n}] ━━\n{r}" for n, r in parts)
         return f"🧩 Merged swarm result:\n\n{merged}"
 
+    def _run_autonomous(self, goal: str) -> str:
+        """Run a synchronous autonomous mission and return the result."""
+        print(f"   🤖 Launching autonomous mission: {goal[:80]}")
+        mission = self.agent.auto.run_sync(goal, max_steps=12)
+        status = mission.get("status")
+        result = mission.get("result") or mission.get("error") or "(no result)"
+        steps = mission.get("step_count", 0)
+        header = f"🤖 Autonomous mission [{mission['id']}] — {status} · {steps} steps"
+        return f"{header}\n\n{result}"
+
+    @staticmethod
+    def _wants_autonomy(low: str, plan) -> bool:
+        triggers = (
+            "research",
+            "investigate",
+            "autonomous",
+            "on your own",
+            "figure out",
+            "write a report",
+            "build me",
+            "create a",
+            "look up",
+            "find out",
+            "full analysis",
+            "end to end",
+            "end-to-end",
+        )
+        if any(t in low for t in triggers):
+            return True
+        # multi-domain plan → better as one autonomous run
+        if len(plan) >= 2:
+            return True
+        return False
+
     def _plan(self, message):
         low = message.lower()
         plan = []
-        if any(k in low for k in ("research", "analyze", "analyse", "find", "investigate")):
+        if any(
+            k in low
+            for k in ("research", "analyze", "analyse", "find", "investigate", "search")
+        ):
             plan.append(("researcher", message))
-        if any(k in low for k in ("code", "build", "write", "script", "benchmark",
-                                  "calculate", "fibonacci", "performance")):
+        if any(
+            k in low
+            for k in (
+                "code",
+                "build",
+                "write",
+                "script",
+                "benchmark",
+                "calculate",
+                "fibonacci",
+                "performance",
+            )
+        ):
             plan.append(("architect", message))
         if any(k in low for k in ("secure", "hide", "encrypt", "secret", "steg")):
             plan.append(("cipher", message))
+        if any(k in low for k in ("browse", "web", "fetch", "url", "scrape")):
+            plan.append(("scout", message))
         return plan
 
     def _delegate(self, bot_name, task):
@@ -137,44 +204,93 @@ class VortexBot:
         if self.role == "coding":
             if any(k in low for k in ("fibonacci", "benchmark", "performance")):
                 return "codeforge", {"code": FIB_BENCH}
+            if any(k in low for k in ("calculate", "compute", "math")):
+                m = re.search(r"(?:calculate|compute)\s+(.+)", msg, re.I)
+                expr = m.group(1).strip().rstrip("?.!") if m else "2+2"
+                return "calculator", {"expression": expr}
             return None
 
         if self.role == "security":
             if any(k in low for k in ("reveal", "decode", "extract")):
-                return "steganography", {"action": "decode",
-                                         "stego": self.agent.memory.get_kv("last_stego") or msg}
+                return "steganography", {
+                    "action": "decode",
+                    "stego": self.agent.memory.get_kv("last_stego") or msg,
+                }
             if any(k in low for k in ("translate", "obfuscate", "conlang")):
-                text = re.sub(r"^(please\s+)?(translate|obfuscate|conlang)\w*\s*:?\s*", "", msg, flags=re.I)
+                text = re.sub(
+                    r"^(please\s+)?(translate|obfuscate|conlang)\w*\s*:?\s*",
+                    "",
+                    msg,
+                    flags=re.I,
+                )
                 return "glossopetrae", {"text": text or msg}
-            payload, cover = _split_hide(re.sub(r"^(hide|secure|encrypt)\s*", "", msg, flags=re.I))
-            return "steganography", {"action": "encode", "payload": payload or msg, "cover": cover}
+            payload, cover = _split_hide(
+                re.sub(r"^(hide|secure|encrypt)\s*", "", msg, flags=re.I)
+            )
+            return "steganography", {
+                "action": "encode",
+                "payload": payload or msg,
+                "cover": cover,
+            }
+
+        if self.role == "research":
+            if any(k in low for k in ("search", "research", "find", "look up", "what is")):
+                q = re.sub(
+                    r"^(please\s+)?(search|research|find|look up|what is)\s*",
+                    "",
+                    msg,
+                    flags=re.I,
+                )
+                return "web_search", {"query": q or msg, "max_results": 5}
+            return None
+
+        if self.role == "scout":
+            url_m = re.search(r"https?://\S+", msg)
+            if url_m:
+                return "http_fetch", {"url": url_m.group(0)}
+            return "web_search", {"query": msg, "max_results": 5}
 
         return None
 
     def _role_reply(self, message, ctx):
         ctx_txt = "\n".join(f"   • {c[:100]}" for c in ctx)
         if self.role == "research":
-            return (f"🔍 Researcher findings on '{message[:50]}':\n"
-                    f"- primary signal detected\n- secondary correlation noted\n"
-                    + (f"Recall from memory:\n{ctx_txt}" if ctx_txt else ""))
+            return (
+                f"🔍 Researcher on '{message[:50]}':\n"
+                f"- ready to search / analyze\n"
+                + (f"Recall:\n{ctx_txt}" if ctx_txt else "")
+            )
         if self.role == "coding":
-            return f"🏗️ Architect: plan drafted for '{message[:50]}'. Provide code or say 'benchmark'."
+            return (
+                f"🏗️ Architect: plan drafted for '{message[:50]}'. "
+                "Provide code, say 'benchmark', or 'calculate <expr>'."
+            )
         if self.role == "security":
-            return f"🔒 Cipher standing by. Say 'hide <payload>' or 'translate <text>'."
+            return "🔒 Cipher standing by. Say 'hide <payload>' or 'translate <text>'."
+        if self.role == "scout":
+            return "🛰️ Scout ready. Give me a query or URL to fetch."
         return f"[{self.name}] ack: {message[:50]}"
 
     # ── tool execution + bug learning ──
     def _call(self, tool_name, args):
-        tool = self.tools[tool_name]
-        try:
-            result = tool.execute(**args)
-        except Exception as e:
-            result = ToolResult("error", {}, f"Tool crashed: {e}")
-        self.agent.memory.log_event("tool_call", f"{self.name}:{tool_name}:{result.status}")
+        result = run_tool(self.tools, tool_name, args)
+        self.agent.memory.log_event(
+            "tool_call", f"{self.name}:{tool_name}:{result.status}"
+        )
         if result.status == "error":
-            self.agent.bugs.add({"bot": self.name, "tool": tool_name,
-                                 "symptoms": [result.message[:60]], "fix": "review args"})
-        if tool_name == "steganography" and args.get("action") == "encode" and result.status == "success":
+            self.agent.bugs.add(
+                {
+                    "bot": self.name,
+                    "tool": tool_name,
+                    "symptoms": [result.message[:60]],
+                    "fix": "review args",
+                }
+            )
+        if (
+            tool_name == "steganography"
+            and args.get("action") == "encode"
+            and result.status == "success"
+        ):
             self.agent.memory.set_kv("last_stego", result.data["encoded"])
         return result
 
@@ -184,24 +300,66 @@ class VortexBot:
         if tool_name == "glossopetrae":
             return f"🗿 Glossopetrae: {r.data['translated']}"
         if tool_name == "steganography":
-            return f"🔐 Hidden:\n{r.data['encoded']}" if "encoded" in r.data else f"🔓 Revealed: {r.data.get('decoded')}"
+            return (
+                f"🔐 Hidden:\n{r.data['encoded']}"
+                if "encoded" in r.data
+                else f"🔓 Revealed: {r.data.get('decoded')}"
+            )
         if tool_name == "codeforge":
             return f"⚙️ Output:\n{r.data.get('output', '(no output)')}"
-        return r.message
+        if tool_name == "calculator":
+            return f"🧮 {r.data.get('expression')} = {r.data.get('result')}"
+        if tool_name == "web_search":
+            lines = [f"🔎 Search: {r.data.get('query')}"]
+            for item in r.data.get("results") or []:
+                lines.append(
+                    f"  • {item.get('title')}\n    {item.get('snippet', '')[:160]}\n    {item.get('url', '')}"
+                )
+            return "\n".join(lines)
+        if tool_name == "http_fetch":
+            return (
+                f"📄 Fetched {r.data.get('url')}:\n"
+                f"{(r.data.get('text') or '')[:800]}"
+            )
+        if tool_name == "write_file":
+            return f"📝 Wrote {r.data.get('path')} ({r.data.get('bytes')} bytes)"
+        if tool_name == "read_file":
+            return f"📖 {r.data.get('path')}:\n{(r.data.get('content') or '')[:800]}"
+        if tool_name == "list_files":
+            files = r.data.get("files") or []
+            listing = "\n".join(
+                f"  • {f['path']} ({f['size']}b)" for f in files[:40]
+            )
+            return f"📁 {r.message}\n{listing}"
+        if tool_name == "shell":
+            return f"$ exit {r.data.get('code')}\n{r.data.get('stdout', '')}"
+        return r.message or str(r.data)
 
 
 class VortexAgent:
-    """The OS: owns bots, memory, vector store, skills, bugs."""
+    """The OS: owns bots, memory, vector store, skills, bugs, autonomy."""
+
     def __init__(self, memory):
         self.memory = memory
         from vector_memory import VectorMemory
         from skills import SkillLibrary, BugLibrary
+        from autonomous import AutonomousAgent
+
         self.vector = VectorMemory()
         self.skills = SkillLibrary()
         self.bugs = BugLibrary()
+        self.toolbelt = build_toolbelt(vector=self.vector, memory=memory)
+        self.auto = AutonomousAgent(
+            memory=memory, vector=self.vector, skills=self.skills, bugs=self.bugs
+        )
         self.bots = {}
-        for name, role in [("chief", "orchestrator"), ("researcher", "research"),
-                           ("architect", "coding"), ("cipher", "security")]:
+        for name, role in [
+            ("chief", "orchestrator"),
+            ("researcher", "research"),
+            ("architect", "coding"),
+            ("cipher", "security"),
+            ("scout", "scout"),
+        ]:
             self.spawn_bot(name, role, quiet=True)
 
     def spawn_bot(self, name, role="general", quiet=False):
@@ -219,8 +377,15 @@ class VortexAgent:
         return False
 
     def list_bots(self):
-        return [{"name": b.name, "role": b.role, "messages": b.message_count, "status": "active"}
-                for b in self.bots.values()]
+        return [
+            {
+                "name": b.name,
+                "role": b.role,
+                "messages": b.message_count,
+                "status": "active",
+            }
+            for b in self.bots.values()
+        ]
 
     def chat(self, message):
         self.memory.save_message("user", message)
