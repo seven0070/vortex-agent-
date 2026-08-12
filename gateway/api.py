@@ -258,6 +258,52 @@ async def skills():
     return os_runtime.skills.list()
 
 
+class CronCreate(BaseModel):
+    name: str
+    goal: str
+    schedule: str = "manual"
+
+
+@app.get("/api/cron")
+async def cron_list():
+    from cron.jobs import CronStore
+
+    return CronStore().list()
+
+
+@app.post("/api/cron")
+async def cron_create(req: CronCreate):
+    from cron.jobs import CronStore
+
+    if not req.goal.strip() or not req.name.strip():
+        raise HTTPException(400, "name and goal required")
+    return CronStore().add(req.name.strip(), req.goal.strip(), req.schedule)
+
+
+@app.delete("/api/cron/{jid}")
+async def cron_delete(jid: str):
+    from cron.jobs import CronStore
+
+    return {"status": "deleted" if CronStore().remove(jid) else "not_found"}
+
+
+@app.post("/api/cron/{jid}/run")
+async def cron_run(jid: str):
+    """Run a stored cron goal once via solo mission."""
+    from cron.jobs import CronStore
+
+    store = CronStore()
+    jobs = {j["id"]: j for j in store.list()}
+    job = jobs.get(jid)
+    if not job:
+        raise HTTPException(404, "job not found")
+    mission = await asyncio.to_thread(
+        os_runtime.agent.run, job["goal"], False, 12
+    )
+    store.mark(jid, mission.get("status") or "unknown")
+    return {"job": jid, "mission": mission}
+
+
 @app.get("/api/history")
 async def history(limit: int = 50):
     # flatten recent session messages via events/stats
@@ -277,6 +323,70 @@ async def stats():
 @app.get("/api/events")
 async def events(limit: int = 50):
     return os_runtime.db.get_events(limit)
+
+
+@app.get("/api/workspace")
+async def workspace_listing(path: str = ".", limit: int = 200):
+    """List files under the Vortex workspace (sandboxed)."""
+    from vortex_constants import ensure_home
+
+    ensure_home()
+    root = WORKSPACE.resolve()
+    target = (WORKSPACE / (path or ".")).resolve()
+    if not str(target).startswith(str(root)):
+        raise HTTPException(400, "path escapes workspace")
+    if not target.exists():
+        return {"root": str(root), "path": path, "entries": []}
+    entries = []
+    if target.is_file():
+        st = target.stat()
+        return {
+            "root": str(root),
+            "path": str(target.relative_to(root)),
+            "entries": [
+                {
+                    "name": target.name,
+                    "path": str(target.relative_to(root)),
+                    "type": "file",
+                    "size": st.st_size,
+                }
+            ],
+        }
+    for p in sorted(target.rglob("*")):
+        if p.is_file():
+            rel = str(p.relative_to(root))
+            entries.append(
+                {"name": p.name, "path": rel, "type": "file", "size": p.stat().st_size}
+            )
+        if len(entries) >= max(1, min(int(limit or 200), 500)):
+            break
+    return {
+        "root": str(root),
+        "path": "." if target == root else str(target.relative_to(root)),
+        "entries": entries,
+        "count": len(entries),
+    }
+
+
+@app.get("/api/workspace/file")
+async def workspace_file(path: str, max_chars: int = 20000):
+    """Read a text file from the workspace."""
+    root = WORKSPACE.resolve()
+    target = (WORKSPACE / path).resolve()
+    if not str(target).startswith(str(root)):
+        raise HTTPException(400, "path escapes workspace")
+    if not target.exists() or not target.is_file():
+        raise HTTPException(404, "file not found")
+    try:
+        text = target.read_text(encoding="utf-8", errors="replace")
+    except Exception as e:
+        raise HTTPException(400, f"cannot read: {e}")
+    return {
+        "path": str(target.relative_to(root)),
+        "size": target.stat().st_size,
+        "content": text[: max(1, min(int(max_chars or 20000), 100_000))],
+        "truncated": len(text) > max_chars,
+    }
 
 
 @app.get("/api/missions/{mid}/stream")
@@ -359,11 +469,11 @@ async def ws_hub(ws: WebSocket):
         _ws_clients.discard(ws)
 
 
-# Static UI — package frontend first, then legacy checkout path
+# Static UI — checkout apps/mission-control, then packaged vortex/data
 _FRONTEND_CANDIDATES = [
-    FRONTEND_DIR,  # apps/mission-control
+    FRONTEND_DIR,
     Path(__file__).resolve().parent.parent / "apps" / "mission-control",
-    Path(__file__).resolve().parent.parent / "vortex-agent" / "frontend",  # legacy
+    Path(__file__).resolve().parent.parent / "vortex" / "data" / "mission-control",
 ]
 FRONTEND = next((p for p in _FRONTEND_CANDIDATES if (p / "index.html").exists()), None)
 

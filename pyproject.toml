@@ -5,12 +5,12 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "vortex-agent"
 version = "2.3.0"
-description = "Vortex Agent — autonomous multi-agent OS (Hermes-style layout, 24-seat council chamber)"
+description = "Vortex Agent — autonomous multi-agent OS with Mission Control and a 24-seat council chamber"
 readme = "README.md"
 license = { text = "MIT" }
 requires-python = ">=3.10"
 authors = [{ name = "Sanath S Patil" }]
-keywords = ["ai", "agent", "multi-agent", "council", "autonomous", "vortex", "hermes"]
+keywords = ["ai", "agent", "multi-agent", "council", "autonomous", "vortex"]
 classifiers = [
   "Development Status :: 4 - Beta",
   "License :: OSI Approved :: MIT License",
@@ -39,7 +39,8 @@ Homepage = "https://github.com/seven0070/vortex-agent-"
 Repository = "https://github.com/seven0070/vortex-agent-"
 
 [tool.setuptools]
-py-modules = ["vortex_constants", "toolsets", "run_agent", "cli"]
+py-modules = ["vortex_constants", "toolsets", "run_agent", "cli", "model_tools", "utils"]
+include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
@@ -52,11 +53,17 @@ include = [
   "cron*",
   "plugins*",
 ]
-exclude = ["tests*", "docs*", "hermes-agent-ref*", "vortex-agent*"]
+exclude = ["tests*", "docs*", "hermes-agent-ref*"]
 
 [tool.setuptools.package-data]
-"*" = ["*.md", "*.html", "*.css", "*.js", "*.yaml", "*.yml"]
-agent = ["*.py"]
-tools = ["*.py"]
-gateway = ["*.py"]
-skills = ["**/*.md"]
+vortex = [
+  "data/mission-control/*",
+  "data/mission-control/assets/*",
+  "data/skills/**/*",
+  "data/skills/*/*",
+]
+"*" = ["*.md", "*.html", "*.css", "*.js", "*.png", "*.ico", "*.yaml", "*.yml"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
