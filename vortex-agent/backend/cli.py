@@ -7,8 +7,9 @@ def main():
     memory = Memory()
     agent = VortexAgent(memory)
 
-    print("\n🌪️  VORTEX AGENT — Phase 2 (The Swarm)")
+    print("\n🌪️  VORTEX AGENT — Phase 3 (Rapid Self-Improvement)")
     print("   Bots:", ", ".join(agent.bots.keys()))
+    print("   RSI  : gen", agent.memory.current_generation())
     print("   Type /help for commands, /quit to exit.\n")
 
     while True:
@@ -46,6 +47,26 @@ def main():
         if msg == "/skills":
             for s in agent.skills.list():
                 print(f"  • {s['name']}: {s['description']}")
+            continue
+        if msg in ("/improve", "/rsi"):
+            print(agent.rsi.report())
+            continue
+        if msg == "/lessons":
+            lessons = agent.memory.get_lessons(True)
+            if not lessons:
+                print("  (no lessons yet — talk to the swarm, it learns mid-turn)")
+            for l in lessons[:20]:
+                print(f"  • [{l['kind']}] {l['trigger']} → {l['action']}  "
+                      f"c={l['confidence']:.2f} {l['wins']}w/{l['losses']}l")
+            continue
+        if msg == "/evolve":
+            cycle = agent.rsi.run_cycle()
+            print(f"  {cycle['decision']}: {cycle['notes']}")
+            print(agent.rsi.report())
+            continue
+        if msg == "/eval":
+            from evals import format_suite, run_suite
+            print(format_suite(run_suite(agent, name="cli")))
             continue
         if msg == "/history":
             for m in memory.get_history(10):

@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Vortex — Rapid Self-Improvement</title>
+  <style>
+    :root {
+      --bg: #07080b;
+      --panel: #101218;
+      --ink: #e8eaef;
+      --muted: #8b93a7;
+      --line: #1e2330;
+      --orange: #f97316;
+      --orange-dim: rgba(249, 115, 22, 0.14);
+      --green: #34d399;
+      --red: #fb7185;
+      --blue: #7dd3fc;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+      font: 14px/1.45 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
+    body {
+      background-image:
+        radial-gradient(900px 400px at 10% -10%, rgba(249,115,22,.16), transparent 50%),
+        radial-gradient(700px 360px at 100% 0%, rgba(56,189,248,.08), transparent 45%);
+    }
+    header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 22px; border-bottom: 1px solid var(--line);
+    }
+    .brand { display: flex; gap: 12px; align-items: center; }
+    .mark {
+      width: 36px; height: 36px; border-radius: 10px;
+      background: conic-gradient(from 120deg, #f97316, #fb923c, #7c2d12, #f97316);
+      display: grid; place-items: center; font-size: 18px;
+      box-shadow: 0 0 24px rgba(249,115,22,.35);
+    }
+    h1 { font-size: 16px; margin: 0; letter-spacing: .04em; }
+    h1 span { color: var(--muted); font-weight: 500; }
+    .pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      border: 1px solid var(--line); background: var(--panel);
+      border-radius: 999px; padding: 4px 10px; color: var(--muted); font-size: 12px;
+    }
+    .pill b { color: var(--orange); font-weight: 600; }
+    main {
+      display: grid;
+      grid-template-columns: 1.1fr .9fr;
+      grid-template-rows: auto 1fr;
+      gap: 14px; padding: 14px; height: calc(100% - 69px);
+    }
+    .cards { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .card {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+      padding: 14px 16px;
+    }
+    .card .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+    .card .v { font-size: 28px; font-weight: 650; margin-top: 6px; }
+    .card .v em { font-style: normal; color: var(--orange); }
+    .panel {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+      display: flex; flex-direction: column; min-height: 0;
+    }
+    .panel h2 {
+      margin: 0; padding: 12px 14px; font-size: 13px; letter-spacing: .06em;
+      text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line);
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    .chat { padding: 12px; overflow: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
+    .bubble { max-width: 92%; padding: 10px 12px; border-radius: 12px; white-space: pre-wrap; }
+    .me { align-self: flex-end; background: var(--orange-dim); border: 1px solid rgba(249,115,22,.35); }
+    .bot { align-self: flex-start; background: #161a22; border: 1px solid var(--line); }
+    .composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
+    input, button {
+      font: inherit; border-radius: 10px; border: 1px solid var(--line); background: #0c0e14; color: var(--ink);
+    }
+    input { flex: 1; padding: 10px 12px; outline: none; }
+    input:focus { border-color: var(--orange); }
+    button {
+      padding: 10px 14px; cursor: pointer; background: var(--orange); color: #1a0b00;
+      border: 0; font-weight: 650;
+    }
+    button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
+    button:disabled { opacity: .5; cursor: wait; }
+    .list { overflow: auto; flex: 1; padding: 8px; }
+    .row {
+      padding: 8px 10px; border-bottom: 1px solid var(--line); display: grid;
+      grid-template-columns: 72px 1fr auto; gap: 8px; align-items: start;
+    }
+    .tag { font-size: 11px; color: var(--orange); }
+    .ok { color: var(--green); }
+    .bad { color: var(--red); }
+    .muted { color: var(--muted); }
+    .tiny { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+    .split { display: grid; grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0; }
+    @media (max-width: 980px) {
+      main { grid-template-columns: 1fr; height: auto; }
+      .cards { grid-template-columns: 1fr 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="mark">🌪️</div>
+      <div>
+        <h1>VORTEX <span>rapid self-improvement</span></h1>
+        <div class="muted" id="sub">observe → rescue → reflect → eval → promote</div>
+      </div>
+    </div>
+    <div class="pills">
+      <div class="pill">gen <b id="gen">—</b></div>
+      <div class="pill">lessons <b id="nlessons">—</b></div>
+      <div class="pill">avg <b id="avg">—</b></div>
+    </div>
+  </header>
+  <main>
+    <section class="cards">
+      <div class="card"><div class="k">Generation</div><div class="v" id="cgen">—</div></div>
+      <div class="card"><div class="k">Eval score</div><div class="v"><em id="cscore">—</em></div></div>
+      <div class="card"><div class="k">Active lessons</div><div class="v" id="cless">—</div></div>
+      <div class="card"><div class="k">Router tokens</div><div class="v" id="crout">—</div></div>
+    </section>
+
+    <section class="panel">
+      <h2>
+        Swarm chat
+        <span>
+          <button class="ghost" id="btnEval" type="button">Run eval</button>
+          <button id="btnCycle" type="button">Improve cycle</button>
+        </span>
+      </h2>
+      <div class="chat" id="chat"></div>
+      <form class="composer" id="form">
+        <input id="msg" autocomplete="off" placeholder="Try: what is 12 times 8  ·  fibonacci of 10  ·  /evolve" />
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <div class="split">
+      <section class="panel">
+        <h2>Lessons learned</h2>
+        <div class="list" id="lessons"></div>
+      </section>
+      <section class="panel">
+        <h2>Recent traces</h2>
+        <div class="list" id="traces"></div>
+      </section>
+    </div>
+  </main>
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const chat = $("chat");
+
+    function bubble(text, who) {
+      const d = document.createElement("div");
+      d.className = "bubble " + who;
+      d.textContent = text;
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function j(url, opt) {
+      const r = await fetch(url, opt);
+      if (!r.ok) throw new Error(await r.text());
+      return r.json();
+    }
+
+    function renderStatus(s) {
+      $("gen").textContent = s.generation;
+      $("cgen").textContent = s.generation;
+      $("nlessons").textContent = s.active_lessons;
+      $("cless").textContent = s.active_lessons;
+      $("avg").textContent = (s.recent_avg_score ?? 0).toFixed(2);
+      $("crout").textContent = s.router_tokens;
+      const ev = s.latest_eval;
+      $("cscore").textContent = ev ? ev.score.toFixed(3) : "—";
+      $("lessons").innerHTML = (s.lessons || []).map(l => `
+        <div class="row">
+          <div class="tag">${l.kind}</div>
+          <div>${l.trigger} → ${l.action}<div class="tiny">${l.wins}w / ${l.losses}l</div></div>
+          <div class="muted">${Number(l.confidence).toFixed(2)}</div>
+        </div>`).join("") || '<div class="row muted">No lessons yet. Chat to teach it.</div>';
+      $("traces").innerHTML = (s.traces || []).map(t => `
+        <div class="row">
+          <div class="${t.status === 'success' || t.status === 'rescued' ? 'ok' : 'bad'}">${t.status || '—'}</div>
+          <div>${(t.task || '').slice(0, 80)}<div class="tiny">${t.bot || ''} ${t.tool || ''} ${t.route || ''}</div></div>
+          <div class="muted">${Number(t.score || 0).toFixed(2)}</div>
+        </div>`).join("") || '<div class="row muted">No traces yet.</div>';
+    }
+
+    async function refresh() {
+      renderStatus(await j("/api/rsi"));
+    }
+
+    $("form").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = $("msg").value.trim();
+      if (!text) return;
+      $("msg").value = "";
+      bubble(text, "me");
+      try {
+        const data = await j("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: text }),
+        });
+        bubble(data.response, "bot");
+      } catch (err) {
+        bubble("error: " + err.message, "bot");
+      }
+      refresh();
+    });
+
+    $("btnCycle").addEventListener("click", async () => {
+      $("btnCycle").disabled = true;
+      bubble("Running improvement cycle (eval → mutate → promote or revert)…", "bot");
+      try {
+        const c = await j("/api/rsi/cycle", { method: "POST" });
+        bubble(`${c.decision}: ${c.notes}`, "bot");
+      } catch (err) {
+        bubble("cycle failed: " + err.message, "bot");
+      }
+      $("btnCycle").disabled = false;
+      refresh();
+    });
+
+    $("btnEval").addEventListener("click", async () => {
+      $("btnEval").disabled = true;
+      try {
+        const e = await j("/api/rsi/eval", { method: "POST" });
+        const lines = e.cases.map(c => `${c.ok ? "✔" : "✘"} ${c.name}`).join("\n");
+        bubble(`eval ${e.passed}/${e.total}  score=${e.score}\n${lines}`, "bot");
+      } catch (err) {
+        bubble("eval failed: " + err.message, "bot");
+      }
+      $("btnEval").disabled = false;
+      refresh();
+    });
+
+    bubble("Vortex online. Ask a natural-language math question or hide a payload — the improver will rescue misses and remember them.", "bot");
+    refresh();
+  </script>
+</body>
+</html>

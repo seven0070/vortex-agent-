@@ -1,15 +1,14 @@
 """Shared skill library + global bug-pattern library."""
 import json
 from datetime import datetime
-from pathlib import Path
 
-BASE = Path.home() / ".vortex"
+from paths import vortex_home
 
 
 class SkillLibrary:
     """Skills saved by any bot are visible to all bots."""
     def __init__(self):
-        self.dir = BASE / "skills"
+        self.dir = vortex_home() / "skills"
         self.dir.mkdir(parents=True, exist_ok=True)
 
     def save(self, name, description, steps, shared=True):
@@ -32,7 +31,7 @@ class SkillLibrary:
 class BugLibrary:
     """Global bug patterns — one bot's lesson becomes every bot's lesson."""
     def __init__(self):
-        self.path = BASE / "bug_patterns.json"
+        self.path = vortex_home() / "bug_patterns.json"
         self.patterns = json.loads(self.path.read_text()) if self.path.exists() else []
 
     def add(self, pattern):

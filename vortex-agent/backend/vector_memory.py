@@ -2,10 +2,7 @@
 import json
 import re
 from collections import Counter
-from pathlib import Path
-
-BASE = Path.home() / ".vortex"
-BASE.mkdir(parents=True, exist_ok=True)
+from paths import vortex_home
 
 
 def _tokenize(t):
@@ -42,11 +39,11 @@ class VectorMemory:
         self.collection = None
         try:
             import chromadb
-            self.chroma = chromadb.PersistentClient(path=str(BASE / "vectors"))
+            self.chroma = chromadb.PersistentClient(path=str(vortex_home() / "vectors"))
             self.collection = self.chroma.get_or_create_collection("vortex")
             self.backend = "chroma"
         except Exception:
-            self.local = LocalVectorStore(BASE / "vectors.json")
+            self.local = LocalVectorStore(vortex_home() / "vectors.json")
 
     def remember(self, text, meta=None):
         if self.backend == "chroma":

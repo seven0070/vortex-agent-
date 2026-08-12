@@ -11,7 +11,9 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict
 
-WORKSPACE = Path.home() / ".vortex" / "workspace"
+from paths import vortex_home
+
+WORKSPACE = vortex_home() / "workspace"
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 
 
