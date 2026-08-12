@@ -3,3 +3,8 @@ uvicorn==0.27.1
 pydantic==2.6.1
 chromadb==0.4.22
 # chromadb is OPTIONAL — if install fails, vector memory falls back to a local store
+# New observability (optional, fallback if not installed)
+opentelemetry-api==1.24.0
+opentelemetry-sdk==1.24.0
+# For future MCP integration
+# mcp==1.0.0

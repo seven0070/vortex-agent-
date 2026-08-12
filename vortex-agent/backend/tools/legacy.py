@@ -1,4 +1,4 @@
-"""Vortex Agent — Phase 1 custom tools."""
+"""Legacy tools from original tools.py — wrapped as capabilities."""
 import ast
 import hashlib
 import os
@@ -12,22 +12,11 @@ from pathlib import Path
 from typing import Any, Dict
 
 from paths import vortex_home
+from .base import ToolResult
 
 WORKSPACE = vortex_home() / "workspace"
 WORKSPACE.mkdir(parents=True, exist_ok=True)
 
-
-@dataclass
-class ToolResult:
-    status: str
-    data: Dict[str, Any] = field(default_factory=dict)
-    message: str = ""
-
-    def to_dict(self):
-        return {"status": self.status, "data": self.data, "message": self.message}
-
-
-# ─── Glossopetrae: conlang translation + SVG render ───────────────────────
 class GlossopetraeTool:
     name = "glossopetrae"
     description = "Translate text into a procedurally generated conlang and render as SVG."
@@ -40,6 +29,13 @@ class GlossopetraeTool:
         },
         "required": ["text"],
     }
+    input_schema = parameters
+    output_schema = {"type": "object", "properties": {"translated": {"type": "string"}, "svg": {"type": "string"}}}
+    permissions = ["read"]
+    risk_level = "low"
+    timeout = 5
+    category = "communication"
+    rollback_method = None
 
     @staticmethod
     def execute(text: str, seed: int = 42, render_svg: bool = True) -> ToolResult:
@@ -63,8 +59,6 @@ class GlossopetraeTool:
             f"Translated with seed {seed}.",
         )
 
-
-# ─── Steganography: hide/reveal payloads in cover text ────────────────────
 class SteganographyTool:
     name = "steganography"
     description = "Encode/decode a secret payload inside benign cover text."
@@ -79,6 +73,13 @@ class SteganographyTool:
         },
         "required": ["action"],
     }
+    input_schema = parameters
+    output_schema = {"type": "object"}
+    permissions = ["read", "write"]
+    risk_level = "medium"
+    timeout = 5
+    category = "security"
+    rollback_method = "delete_last_stego"
 
     @staticmethod
     def execute(action: str, cover: str = "", payload: str = "",
@@ -111,7 +112,6 @@ class SteganographyTool:
         return ToolResult("error", {}, f"Invalid action: {action}")
 
 
-# ─── CodeForge: safe sandboxed Python execution ───────────────────────────
 class CodeForgeTool:
     name = "codeforge"
     description = "Execute Python code in an isolated subprocess with a timeout."
@@ -123,16 +123,21 @@ class CodeForgeTool:
         },
         "required": ["code"],
     }
+    input_schema = parameters
+    output_schema = {"type": "object", "properties": {"output": {"type": "string"}}}
+    permissions = ["execute", "write"]
+    risk_level = "high"
+    timeout = 15
+    category = "code"
+    rollback_method = "kill_subprocess"
 
     @staticmethod
     def execute(code: str, timeout: int = 10) -> ToolResult:
-        # Safety gate 1: syntax validation before execution
         try:
             ast.parse(code)
         except SyntaxError as e:
             return ToolResult("error", {}, f"Syntax error: {e}")
 
-        # Safety gate 2: isolated subprocess, workspace-cwd, hard timeout
         tmp = tempfile.NamedTemporaryFile(
             mode="w", suffix=".py", delete=False, dir=str(WORKSPACE))
         try:
@@ -149,6 +154,5 @@ class CodeForgeTool:
             return ToolResult("error", {}, f"Timed out after {timeout}s.")
         finally:
             os.unlink(tmp.name)
-
 
 TOOL_CLASSES = [GlossopetraeTool, SteganographyTool, CodeForgeTool]

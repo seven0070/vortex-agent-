@@ -1,6 +1,7 @@
-"""Vortex swarm: VortexAgent (the OS) + VortexBot (teammates)."""
+"""Vortex swarm: VortexAgent (the OS) + VortexBot (teammates) — upgraded to Council + Sovereign + Governance + Orchestration + Resolution + Observability."""
 import re
 import time
+from typing import Dict, Any, Optional
 
 from self_improve import RapidSelfImprovement, is_weak
 from tools import TOOL_CLASSES, ToolResult
@@ -19,16 +20,34 @@ r = fib(90)
 print(f"fib(90)={r} in {time.time()-t:.5f}s")
 """
 
-
 def _extract_code(msg):
     m = CODE_BLOCK.search(msg)
     if m:
         return m.group(1).strip()
+    # try math compilation first
+    try:
+        from self_improve import compile_math
+        cm = compile_math(msg)
+        if cm:
+            # extract inner code from print(...)
+            # cm is like "print(6 * 7)"
+            inner = cm[len("print("):-1] if cm.startswith("print(") else cm
+            return cm
+    except:
+        pass
     m = re.search(r"(?:calculate|compute|eval)\s+(.+)", msg, re.I)
     if m:
-        return f"print({m.group(1).strip().rstrip('?.!')})"
+        expr = m.group(1).strip().rstrip('?.!')
+        # attempt to translate times etc via compile_math
+        try:
+            from self_improve import compile_math
+            cm2 = compile_math(f"calculate {expr}")
+            if cm2:
+                return cm2
+        except:
+            pass
+        return f"print({expr})"
     return None
-
 
 def _split_hide(rest):
     rest = rest.strip(" :")
@@ -39,7 +58,6 @@ def _split_hide(rest):
         payload, _, cover = rest.partition(" in ")
         return payload.strip(), cover.strip()
     return rest, ""
-
 
 class VortexBot:
     def __init__(self, agent, name, role):
@@ -55,7 +73,21 @@ class VortexBot:
         self.message_count += 1
         self._last = {}
         t0 = time.time()
-        ctx = self.agent.vector.recall(f"{self.role} {message}", n=2)
+
+        # hybrid memory recall
+        ctx = []
+        try:
+            # vector recall
+            ctx = self.agent.vector.recall(f"{self.role} {message}", n=2)
+        except:
+            ctx = []
+        # enhanced recall from new memory system if available
+        try:
+            if hasattr(self.agent.memory, 'recall'):
+                enhanced = self.agent.memory.recall(f"{self.role} {message}", n=2)
+                ctx.extend([str(r)[:100] for r in enhanced[:2]])
+        except:
+            pass
 
         if self.role == "orchestrator":
             reply = self._chief(message)
@@ -71,7 +103,19 @@ class VortexBot:
                     source = "learned"
             if route:
                 tool_name, args = route
-                result = self._call(tool_name, args)
+                # governance check before tool execution
+                try:
+                    if self.agent.governance:
+                        dec = self.agent.governance.evaluate(task=f"bot:{self.name} tool:{tool_name}", context={"tool": tool_name, "args": args, "agent": self.name}, agent=self.name, action="execute")
+                        if dec["action"] == "DENY":
+                            result = ToolResult("error", {}, f"Governance DENY: {dec['reason']}")
+                        else:
+                            result = self._call(tool_name, args)
+                    else:
+                        result = self._call(tool_name, args)
+                except:
+                    result = self._call(tool_name, args)
+
                 if result.status == "error":
                     retry = self.agent.rsi.retry_tool(tool_name, args, result.message)
                     if retry:
@@ -94,6 +138,13 @@ class VortexBot:
 
         self.agent.memory.save_message(f"bot:{self.name}", reply)
         self.agent.vector.remember(f"[{self.name}/{self.role}] {message} -> {reply[:200]}")
+        # also store in new memory system
+        try:
+            if hasattr(self.agent.memory, 'agent_memory'):
+                self.agent.memory.agent_memory.remember(self.name, f"{message[:80]} -> {reply[:120]}", kind="interaction")
+        except:
+            pass
+
         self.agent.rsi.observe(
             task=message, reply=reply, bot=self.name,
             tool=self._last.get("tool"), status=self._last.get("status"),
@@ -103,11 +154,11 @@ class VortexBot:
         )
         return reply
 
-    # ── chief: plan + delegate + merge ──
+    # ── chief: now can use orchestration graph for complex tasks ──
     def _chief(self, message):
-        low = message.lower()
+        low = message.lower().strip()
 
-        # Phase-1 slash commands, routed to specialists
+        # slash commands routed to specialists (unchanged)
         if low.startswith("/translate"):
             return self._delegate("cipher", message)
         if low.startswith("/run"):
@@ -123,7 +174,16 @@ class VortexBot:
                                   "evolve yourself", "run rsi")):
             return self._delegate("improver", message)
 
-        # Rapid path: a learned/compiled intent beats a multi-bot plan
+        # If explicit orchestrate prefix, use full graph (avoid recursion on auto-detect)
+        if low.startswith("orchestrate:") and self.agent.graph:
+            try:
+                goal = message[len("orchestrate:"):].strip() or message
+                return self.agent.run_orchestrated(goal, original_message=message)
+            except Exception as e:
+                print(f"[chief] orchestration fallback: {e}")
+                # fallback to legacy
+
+        # Rapid path: learned/compiled intent beats multi-bot plan
         learned = self.agent.rsi.suggest_route(message, self.role)
         if learned:
             tool_name, args, meta = learned
@@ -141,9 +201,21 @@ class VortexBot:
 
         plan = self._plan(message)
         if not plan:
+            # check sovereign objectives for context
+            sov_ctx = ""
+            try:
+                if self.agent.sovereign:
+                    sov_ctx = f"\nSovereign: {self.agent.sovereign.identity.whoami()} | top priority: {self.agent.sovereign.priorities.top()}"
+            except:
+                pass
             return ("🌪️ Chief here. I coordinate the swarm: researcher, architect, cipher, improver. "
                     "Give me a task that spans research/build/security and I'll delegate and merge. "
-                    "Say /improve to inspect rapid self-improvement, or /evolve to run a cycle.")
+                    "Say /improve to inspect rapid self-improvement, or /evolve to run a cycle." + sov_ctx)
+
+        # Council deliberation via explicit orchestration graph node (avoid recursion in chief)
+        # Auto-council disabled for stability; council available via /api/council/deliberate and orchestration graph
+        if False and self.agent.council and len(plan) >= 2:
+            pass
 
         parts, findings = [], []
         # run non-cipher bots first
@@ -196,14 +268,34 @@ class VortexBot:
             cycle = self.agent.rsi.run_cycle()
             decision = cycle["decision"]
             icon = "🚀" if decision == "promoted" else "↩️"
+            evo = cycle.get("evolution")
+            evo_txt = f"\nEvolution: {evo.get('decision')} {evo.get('reason','')[:100]}" if evo else ""
             return (f"{icon} Improvement cycle {decision}.\n"
-                    f"{cycle['notes']}\n\n{self.agent.rsi.report()}")
+                    f"{cycle['notes']}{evo_txt}\n\n{self.agent.rsi.report()}")
         if "eval" in low:
+            if "benchmark" in low or "vortex" in low:
+                try:
+                    from evals import VortexBenchmark
+                    vb = VortexBenchmark(self.agent)
+                    res = vb.run_comprehensive(persist=False)
+                    from evals import format_suite
+                    return format_suite(res)
+                except Exception as e:
+                    return f"benchmark error: {e}"
             from evals import format_suite, run_suite
             return format_suite(run_suite(self.agent, name="manual"))
+        if "council" in low and self.agent.council:
+            return f"🏛️ Council members: {list(self.agent.council.members.keys())}\nWeights: {self.agent.council.weights}"
+        if "governance" in low and self.agent.governance:
+            pol = self.agent.governance.policy.list_policies()
+            return f"⚖️ Governance policies: {len(pol)} active\n" + "\n".join(f"  • {p['name']} → {p['action']}" for p in pol[:6])
+        if "sovereign" in low and self.agent.sovereign:
+            ctx = self.agent.sovereign.context()
+            return f"👑 Sovereign: {ctx['identity'].get('name')} | mode={ctx['state'].get('mode')} | objectives={len(ctx['objectives'])}"
         return ("🧬 Improver online. I close the loop: observe → rescue → "
                 "reflect → eval → promote.\n\n" + self.agent.rsi.report() +
-                "\n\nSay 'run cycle' to mutate and keep only score gains.")
+                "\n\nSay 'run cycle' to mutate and keep only score gains.\n"
+                "Try: eval benchmark / council / governance / sovereign")
 
     # ── specialist routing ──
     def _route(self, msg):
@@ -216,6 +308,18 @@ class VortexBot:
             learned = self.agent.rsi.suggest_route(msg, self.role)
             if learned:
                 return learned[0], learned[1]
+            # math compilation
+            try:
+                from self_improve import compile_math, compile_fib
+                cm = compile_math(msg)
+                if cm:
+                    return "codeforge", {"code": cm}
+                if "fibonacci" in low:
+                    fib = compile_fib(msg)
+                    if fib:
+                        return "codeforge", {"code": fib}
+            except:
+                pass
             if any(k in low for k in ("benchmark", "performance")) and "fibonacci" in low:
                 return "codeforge", {"code": FIB_BENCH}
             if "fibonacci" in low:
@@ -239,7 +343,7 @@ class VortexBot:
         return None
 
     def _role_reply(self, message, ctx):
-        ctx_txt = "\n".join(f"   • {c[:100]}" for c in ctx)
+        ctx_txt = "\n".join(f"   • {c[:100]}" for c in ctx) if ctx else ""
         if self.role == "research":
             return (f"🔍 Researcher findings on '{message[:50]}':\n"
                     f"- primary signal detected\n- secondary correlation noted\n"
@@ -265,6 +369,14 @@ class VortexBot:
                                  "symptoms": [result.message[:60]], "fix": "review args"})
         if tool_name == "steganography" and args.get("action") == "encode" and result.status == "success":
             self.agent.memory.set_kv("last_stego", result.data["encoded"])
+
+        # observability
+        try:
+            if self.agent.observability:
+                self.agent.observability.metrics.record_tool_call(tool_name, result.status, 0)
+        except:
+            pass
+
         return result
 
     def _format(self, tool_name, r):
@@ -280,7 +392,7 @@ class VortexBot:
 
 
 class VortexAgent:
-    """The OS: owns bots, memory, vector store, skills, bugs."""
+    """The OS: owns bots, memory, vector store, skills, bugs, plus new layers."""
     def __init__(self, memory):
         self.memory = memory
         from vector_memory import VectorMemory
@@ -290,10 +402,85 @@ class VortexAgent:
         self.bugs = BugLibrary()
         self.bots = {}
         self.rsi = RapidSelfImprovement(self)
+
+        # ── new layers (import lazily to avoid circular) ──
+        self.governance = None
+        self.sovereign = None
+        self.council = None
+        self.resolver = None
+        self.graph = None
+        self.observability = None
+        self.tool_registry = None
+        self.state_manager = None
+
+        try:
+            from governance import Governance
+            self.governance = Governance(memory=self.memory)
+        except Exception as e:
+            print(f"[agent] governance not loaded: {e}")
+
+        try:
+            from sovereign import Sovereign
+            self.sovereign = Sovereign(memory=self.memory)
+        except Exception as e:
+            print(f"[agent] sovereign not loaded: {e}")
+
+        try:
+            from council import VortexCouncil
+            self.council = VortexCouncil(agent=self, memory=self.memory, governance=self.governance)
+        except Exception as e:
+            print(f"[agent] council not loaded: {e}")
+
+        try:
+            from resolution import VortexResolver
+            self.resolver = VortexResolver(memory=self.memory, governance=self.governance)
+        except Exception as e:
+            print(f"[agent] resolver not loaded: {e}")
+
+        try:
+            from observability import Observability
+            self.observability = Observability(memory=self.memory)
+        except Exception as e:
+            print(f"[agent] observability not loaded: {e}")
+
+        try:
+            from tools import get_registry
+            self.tool_registry = get_registry(governance=self.governance)
+        except Exception as e:
+            print(f"[agent] tool registry not loaded: {e}")
+
+        try:
+            from orchestration import StateManager, create_default_graph
+            self.state_manager = StateManager()
+            # graph uses agent, memory, tools, governance, resolver, council
+            self.graph = create_default_graph(
+                agent=self,
+                memory=self.memory,
+                tools=self.tool_registry.tools if self.tool_registry else {t.name: t for t in TOOL_CLASSES},
+                governance=self.governance,
+                resolver=self.resolver,
+                council=self.council,
+                observability=self.observability
+            )
+        except Exception as e:
+            print(f"[agent] orchestration graph not loaded: {e}")
+
+        # spawn legacy bots + council specialist bots mapping
         for name, role in [("chief", "orchestrator"), ("researcher", "research"),
                            ("architect", "coding"), ("cipher", "security"),
                            ("improver", "improve")]:
             self.spawn_bot(name, role, quiet=True)
+
+        # additional council roles as bots for richer deliberation (optional)
+        council_bots = [
+            ("planner", "planning"),
+            ("critic", "critic"),
+            ("strategist", "strategy"),
+            ("verifier", "verification"),
+        ]
+        for name, role in council_bots:
+            if name not in self.bots:
+                self.spawn_bot(name, role, quiet=True)
 
     def spawn_bot(self, name, role="general", quiet=False):
         self.bots[name] = VortexBot(self, name, role)
@@ -315,4 +502,68 @@ class VortexAgent:
 
     def chat(self, message):
         self.memory.save_message("user", message)
-        return self.bots["chief"].handle(message)
+        # observability trace start
+        trace_id = None
+        if self.observability:
+            try:
+                trace_id = self.observability.tracer.start_trace(goal=message, generation_id=self.memory.current_generation())
+            except:
+                pass
+
+        reply = self.bots["chief"].handle(message)
+
+        # observability finish
+        if self.observability and trace_id:
+            try:
+                self.observability.tracer.finish_trace(trace_id, final_outcome=reply[:200], score=0.7)
+                self.observability.metrics.inc("chat_total")
+            except:
+                pass
+
+        # sovereign lifecycle awareness
+        if self.sovereign:
+            try:
+                self.sovereign.state.add_learning(f"chat: {message[:60]} -> {reply[:60]}")
+            except:
+                pass
+
+        return reply
+
+    def run_orchestrated(self, goal: str, original_message: str = None) -> str:
+        """Full orchestration path: Goal → Understand → Plan → Decompose → Route → Execute → Observe → Evaluate → Recover → Council → Resolution → Complete"""
+        if not self.graph:
+            return self.chat(goal)
+
+        t0 = time.time()
+        state = self.graph.run(goal=goal, original_message=original_message or goal, generation=self.memory.current_generation())
+
+        latency_ms = int((time.time()-t0)*1000)
+        # metrics
+        if self.observability:
+            try:
+                self.observability.metrics.observe("orchestration_latency", latency_ms)
+                for task in state.tasks:
+                    self.observability.metrics.observe("task_latency", task.latency_ms)
+            except:
+                pass
+
+        final = state.final_response or "Orchestration completed with no final response"
+        # add resolution info
+        if state.resolution:
+            sel = state.resolution.get("selected", {})
+            scores = sel.get("scores") or {}
+            final += f"\n\n[Resolver selected {sel.get('id','?')} score={sel.get('total_score','?')} | scores={scores}]"
+
+        # governance audit already happens inside tools
+
+        return final
+
+    def council_deliberate(self, goal: str):
+        if not self.council:
+            return {"error": "council not loaded"}
+        return self.council.deliberate(goal=goal)
+
+    def resolve_candidates(self, candidates, goal=""):
+        if not self.resolver:
+            return {"error": "resolver not loaded"}
+        return self.resolver.resolve(candidates, goal=goal)
