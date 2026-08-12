@@ -6,7 +6,7 @@ Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspire
 
 ### Agent Council — members *are* the agent projects
 
-Fourteen weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex's autonomous chief executes**.
+Sixteen weighted seats, each embodying a real open-source agent stack. They deliberate; **Vortex's autonomous chief executes**.
 
 | | Seat | Project | Mandate |
 |---|------|---------|---------|
@@ -24,9 +24,11 @@ Fourteen weighted seats, each embodying a real open-source agent stack. They del
 | 🔭 | **Opik** | [comet-ml/opik](https://github.com/comet-ml/opik) | Observability · eval · tracing |
 | 🧬 | **DSPy** | [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) | Program LMs · optimize loops |
 | ☁ | **Kitesurf** | [kitesurf.cloudflare.app](https://kitesurf.cloudflare.app) | Edge · browser · cloud agents |
+| 🧠 | **Memory** | [TencentCloud/TencentDB-Agent-Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) | Team memory hub · skills · wiki · code-graph |
+| 🕸 | **Cognee** | [topoteretes/cognee](https://github.com/topoteretes/cognee) | Knowledge-graph long-term memory |
 
 Pipeline: **brief → propose → critique → vote → chief executes**.  
-Prime + Hermes hold a **hard veto** on harmful goals. Opik demands traces/evals; DSPy demands modular steps; LifeOS demands Ideal-State progress.
+Prime + Hermes hold a **hard veto** on harmful goals. Opik demands traces/evals; DSPy demands modular steps; LifeOS demands Ideal-State progress; **Memory** demands team assets; **Cognee** demands graph-linked recall.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -86,7 +88,7 @@ Without keys, the **offline planner** still runs full multi-step missions.
 
 - **Autonomous missions** — goal in, plan → act → observe until done
 - **Live trace** — WebSocket + SSE thought/tool/observation stream
-- **Agent Council** — 14 project seats deliberate, then chief executes
+- **Agent Council** — 16 project seats deliberate, then chief executes
 - **Swarm** — chief · researcher · architect · cipher · scout (role toolsets)
 - **Skills** — bundled `SKILL.md` playbooks + auto-learned skills from successful runs
 - **Memory** — SQLite sessions, FTS5 search, vector recall, `MEMORY.md`

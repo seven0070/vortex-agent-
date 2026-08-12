@@ -1,7 +1,7 @@
 ---
 name: council
-description: Convene the multi-project AI Agent Council (14 seats including LifeOS, Opik, DSPy, Kitesurf)
-tags: council, multi-agent, hermes, agent-zero, eve, openworker, lifeos, opik, dspy
+description: Convene the multi-project AI Agent Council (16 seats including Memory hub + Cognee graph)
+tags: council, multi-agent, hermes, memory, cognee, opik, dspy, lifeos
 source: bundled
 ---
 
@@ -27,13 +27,15 @@ The council seats are **inspired by real open-source agent projects**. They deli
 | 🔭 Opik | [comet-ml/opik](https://github.com/comet-ml/opik) |
 | 🧬 DSPy | [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) |
 | ☁ Kitesurf | [kitesurf.cloudflare.app](https://kitesurf.cloudflare.app) |
+| 🧠 Memory | [TencentCloud/TencentDB-Agent-Memory](https://github.com/TencentCloud/TencentDB-Agent-Memory) |
+| 🕸 Cognee | [topoteretes/cognee](https://github.com/topoteretes/cognee) |
 
 ## When to convene
 
-- Multi-domain goals (research + build + secure)
+- Multi-domain goals (research + build + secure + memory)
 - User says council / deliberate / debate / pros and cons
-- Architecture, eval, or life/work hill-climb decisions
-- High-stakes plans that need adversarial + observability review
+- Knowledge that must persist across agents/sessions
+- High-stakes plans needing eval + graph memory + quality gates
 
 ## How
 
@@ -42,13 +44,13 @@ convene_council(goal="...", auto_execute=true)
 ```
 
 Optional seats filter (comma-separated ids):
-`prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook,lifeos,opik,dspy,kitesurf`
+`prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook,lifeos,opik,dspy,kitesurf,tencent_memory,cognee`
 
 ## Pipeline
 
 1. **Brief** — each project seat frames the goal  
-2. **Propose** — builders + synthesizers (incl. LifeOS, DSPy, Opik, Kitesurf)  
-3. **Critique** — Prime gate + Opik eval + DSPy modularity + Buzz collab + evidence  
+2. **Propose** — builders + memory + synthesizers  
+3. **Critique** — Prime gate + Opik eval + Cognee graph + Memory hub + evidence  
 4. **Vote** — weighted; Prime/Hermes hard-veto on harm  
 5. **Execute** — Vortex chief runs the consensus with tools  
 

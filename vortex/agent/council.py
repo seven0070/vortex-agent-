@@ -19,6 +19,8 @@ Seats (council members):
   🔭  Opik          — comet-ml/opik               observability · eval · tracing
   🧬  DSPy          — stanfordnlp/dspy            program LMs · optimize loops
   ☁  Kitesurf      — kitesurf.cloudflare.app     edge · browser · cloud agents
+  🧠  Memory        — TencentCloud/TencentDB-Agent-Memory  team memory hub
+  🕸  Cognee        — topoteretes/cognee         knowledge-graph memory
 """
 from __future__ import annotations
 
@@ -290,6 +292,40 @@ DEFAULT_SEATS: List[Seat] = [
         color="#f59e0b",
         icon="☁",
     ),
+    Seat(
+        id="tencent_memory",
+        name="Memory",
+        title="Team Memory Hub",
+        project="TencentCloud/TencentDB-Agent-Memory",
+        url="https://github.com/TencentCloud/TencentDB-Agent-Memory",
+        mandate=(
+            "Turn conversations, docs, and code into reusable team memory assets: "
+            "Chat Memory, Skills, LLM-Wiki, and Code-Graph — governed, shared, "
+            "and equipped across agents and frameworks."
+        ),
+        lens="Agents remember. Humans innovate. — team-level memory that compounds.",
+        toolset="memory",
+        weight=1.4,
+        color="#0ea5e9",
+        icon="🧠",
+    ),
+    Seat(
+        id="cognee",
+        name="Cognee",
+        title="Knowledge-Graph Memory",
+        project="topoteretes/cognee",
+        url="https://github.com/topoteretes/cognee",
+        mandate=(
+            "Build persistent long-term memory as a self-hosted knowledge graph. "
+            "Ingest any format, connect entities, and let every agent recall with "
+            "full relational context across sessions."
+        ),
+        lens="AI memory platform — graph edges beat flat note dumps.",
+        toolset="memory",
+        weight=1.4,
+        color="#10b981",
+        icon="🕸",
+    ),
 ]
 
 
@@ -526,6 +562,41 @@ class PersonaMind:
             actions = ["web_search", "http_fetch top hit if URL exists", "write_file edge-ready report"]
             stance = "support" if any(k in g for k in ("research", "web", "cloud", "deploy", "browser")) else "amend"
 
+        elif seat.id == "tencent_memory":
+            points = [
+                "Promote this run into team assets: chat memory, skill, wiki, or code-graph.",
+                "Memory must be governed and shareable across agents — not a private dump.",
+                "Equip the next agent with what this session learns.",
+            ]
+            actions = [
+                "memory_store structured findings",
+                "Save a skill if the path works",
+                "Tag assets for team reuse",
+            ]
+            stance = "support"
+            if any(k in g for k in ("remember", "memory", "recall", "knowledge")):
+                stance = "support"
+                actions = ["memory_recall related notes", "memory_store update", "Finish"]
+
+        elif seat.id == "cognee":
+            points = [
+                "Ingest results into a knowledge graph — entities + relations, not only prose.",
+                "Cross-session recall should traverse edges (who/what/why linked).",
+                "Self-hosted memory beats disposable context windows.",
+            ]
+            actions = [
+                "memory_store with entity-rich text",
+                "memory_recall before acting on related goals",
+                "write_file knowledge/<slug>.md graph notes",
+            ]
+            stance = "support"
+            if any(k in g for k in ("research", "analyze", "report", "knowledge", "memory")):
+                actions = [
+                    "web_search / gather sources",
+                    "memory_store linked findings",
+                    "write_file knowledge graph summary",
+                ]
+
         else:  # notebook
             points = [
                 "Ground claims in search/fetch evidence.",
@@ -540,11 +611,11 @@ class PersonaMind:
                 actions = ["calculator or execute_code", "Print the number", "Finish"]
                 stance = "support"
         if any(k in g for k in ("hide", "steg", "secret", "encrypt")):
-            if seat.id in ("zero", "hermes", "prime", "openworker", "opik"):
+            if seat.id in ("zero", "hermes", "prime", "openworker", "opik", "tencent_memory"):
                 actions = ["steganography encode", "Return encoded cover text"]
                 stance = "support"
         if any(k in g for k in ("hack", "exploit", "malware", "steal", "weapon", "ddos", "phish")):
-            if seat.id in ("prime", "hermes", "buzz", "qm", "opik", "lifeos"):
+            if seat.id in ("prime", "hermes", "buzz", "qm", "opik", "lifeos", "tencent_memory", "cognee"):
                 stance = "oppose"
                 risks = ["Harmful intent — veto and offer a safe alternative."]
                 points = ["Refuse abuse paths. Redirect to defensive/educational framing only."]
@@ -603,6 +674,23 @@ class PersonaMind:
                 "One hill-climb action",
                 "write_file plans/next.md",
             ]
+        if seat.id == "tencent_memory":
+            base = actions or ["Execute core path"]
+            actions = base + [
+                "memory_store team asset",
+                "Promote path to skill if reusable",
+            ]
+            seen = set()
+            actions = [a for a in actions if not (a in seen or seen.add(a))]
+        if seat.id == "cognee":
+            base = actions or ["Gather inputs"]
+            actions = base + [
+                "memory_store entity-linked notes",
+                "memory_recall related graph context",
+                "write_file knowledge summary",
+            ]
+            seen = set()
+            actions = [a for a in actions if not (a in seen or seen.add(a))]
         if seat.id == "prime":
             # quality gate proposal always injects verify + persist
             base = actions or ["Execute core path"]
@@ -700,6 +788,18 @@ class PersonaMind:
             risks = ["Local-only assumptions break cloud portability."]
             stance = "support"
 
+        elif seat.id == "tencent_memory":
+            points = ["Will this session leave reusable team memory assets?"]
+            risks = ["Knowledge dies in chat if not stored as chat/skill/wiki/code-graph."]
+            actions = ["memory_store outcome", "skill_view / save learned skill"]
+            stance = "amend"
+
+        elif seat.id == "cognee":
+            points = ["Are findings linked as a graph (entities + relations)?"]
+            risks = ["Flat notes without edges block multi-hop recall later."]
+            actions = ["memory_store entity-rich text", "memory_recall before next related task"]
+            stance = "amend"
+
         elif seat.id == "openworker":
             best = max(proposals, key=lambda p: len(p.actions)) if proposals else None
             points = [
@@ -712,9 +812,12 @@ class PersonaMind:
             points = ["Enough talk — ensure the exec path actually calls tools."]
             stance = "support"
 
-        # harm veto from quality/collab/obs seats
+        # harm veto from quality/collab/obs/memory seats
         if any(k in g for k in ("hack", "exploit", "malware", "steal", "weapon", "ddos", "phish")):
-            if seat.id in ("prime", "hermes", "buzz", "qm", "openworker", "opik", "lifeos"):
+            if seat.id in (
+                "prime", "hermes", "buzz", "qm", "openworker", "opik",
+                "lifeos", "tencent_memory", "cognee",
+            ):
                 stance = "oppose"
                 points = ["Veto: harmful goal. Refuse and offer defensive alternative only."]
                 risks = ["Abuse / unauthorized access path."]
@@ -751,7 +854,8 @@ class PersonaMind:
         )
 
         if gate_oppose and seat.id in (
-            "prime", "hermes", "buzz", "qm", "openworker", "zero", "opik", "lifeos"
+            "prime", "hermes", "buzz", "qm", "openworker", "zero",
+            "opik", "lifeos", "tencent_memory", "cognee",
         ):
             vote, stance = "reject", "oppose"
             summary = f"{seat.name} votes REJECT — safety/quality gate."
@@ -779,6 +883,22 @@ class PersonaMind:
             else:
                 vote, stance = "amend", "amend"
                 summary = f"{seat.name} votes AMEND — modularize the plan."
+        elif seat.id == "tencent_memory":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "memory_store" in text or "skill" in text or "wiki" in text or "graph" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — team memory path present."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — store team memory assets."
+        elif seat.id == "cognee":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "memory" in text or "graph" in text or "entity" in text or "recall" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — knowledge-graph path present."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — link findings in graph memory."
         elif seat.id == "notebook" and any(k in g for k in ("research", "report")):
             text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
             if "web_search" in text or "search" in text:
@@ -794,7 +914,8 @@ class PersonaMind:
         actions: List[str] = []
         for prefer in (
             "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
-            "notebook", "eve", "kitesurf", "opik", "prime",
+            "notebook", "eve", "kitesurf", "opik", "tencent_memory",
+            "cognee", "prime",
         ):
             for o in history:
                 if o.round == "propose" and o.seat_id == prefer:
@@ -971,6 +1092,7 @@ class AgentCouncil:
                 if s.id in (
                     "hermes", "zero", "grok", "openworker", "notebook", "eve",
                     "prime", "odysseus", "lifeos", "dspy", "kitesurf", "opik",
+                    "tencent_memory", "cognee",
                 )
             ] or seats[:6]
             session.rounds.append("propose")
@@ -998,6 +1120,7 @@ class AgentCouncil:
                 if s.id in (
                     "prime", "hermes", "buzz", "qm", "eve", "notebook",
                     "openworker", "opik", "dspy", "lifeos", "kitesurf",
+                    "tencent_memory", "cognee",
                 )
             ] or seats
             session.rounds.append("critique")
@@ -1125,7 +1248,7 @@ class AgentCouncil:
             return self._offline_opinion(seat, round_name, session.goal, prior)
 
         out: List[Opinion] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(14, len(seats) or 1)) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(16, len(seats) or 1)) as pool:
             futs = {pool.submit(one, s): s for s in seats}
             for fut in concurrent.futures.as_completed(futs):
                 try:
@@ -1250,8 +1373,8 @@ class AgentCouncil:
         ranked_actions: List[str] = []
         for prefer in (
             "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
-            "notebook", "eve", "kitesurf", "odysseus", "opik", "prime",
-            "qm", "buzz",
+            "notebook", "eve", "kitesurf", "odysseus", "opik",
+            "tencent_memory", "cognee", "prime", "qm", "buzz",
         ):
             for o in session.opinions:
                 if o.seat_id == prefer and o.actions:
