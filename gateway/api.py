@@ -15,8 +15,8 @@ from fastapi.responses import FileResponse, HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
-from vortex.agent.os import VortexOS
-from vortex.constants import FRONTEND_DIR, NAME, VERSION, WORKSPACE
+from agent.os import VortexOS
+from vortex_constants import FRONTEND_DIR, NAME, VERSION, WORKSPACE
 
 
 class ChatRequest(BaseModel):
@@ -361,9 +361,9 @@ async def ws_hub(ws: WebSocket):
 
 # Static UI — package frontend first, then legacy checkout path
 _FRONTEND_CANDIDATES = [
-    FRONTEND_DIR,
-    Path(__file__).resolve().parent.parent / "frontend",
-    Path(__file__).resolve().parent.parent.parent / "vortex-agent" / "frontend",
+    FRONTEND_DIR,  # apps/mission-control
+    Path(__file__).resolve().parent.parent / "apps" / "mission-control",
+    Path(__file__).resolve().parent.parent / "vortex-agent" / "frontend",  # legacy
 ]
 FRONTEND = next((p for p in _FRONTEND_CANDIDATES if (p / "index.html").exists()), None)
 

@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Vortex Agent entrypoint (repo checkout).
+"""Vortex Agent entrypoint (Hermes-style root launcher).
 
   python run.py              # Mission Control UI + API on :8765
-  python run.py 9000         # custom port
-  python run.py cli          # interactive CLI
-  python run.py doctor       # environment check
+  python run.py 9000
+  python run.py cli
+  python run.py doctor
   python run.py version
 """
 from __future__ import annotations

@@ -18,7 +18,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 
-from vortex.constants import WORKSPACE, ensure_home
+from vortex_constants import WORKSPACE, ensure_home
 
 
 # Seats that do useful tool work when dispatched (not pure meta/politics)

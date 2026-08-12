@@ -4,7 +4,7 @@ from __future__ import annotations
 from datetime import datetime
 from typing import List, Optional
 
-from vortex.constants import NAME, VERSION, WORKSPACE
+from vortex_constants import NAME, VERSION, WORKSPACE
 
 
 IDENTITY = f"""You are {NAME} v{VERSION}, an autonomous multi-agent operating system.

@@ -1,140 +1,119 @@
 # 🌪️ Vortex Agent
 
-**Autonomous multi-agent OS** — 24-seat council chamber, parallel seat workers, chief execution.
+**Autonomous multi-agent OS** — Hermes-style layout, 24-seat council chamber, parallel seat workers.
 
+External structure is modeled on [Nous Research Hermes Agent](https://github.com/NousResearch/hermes-agent).
+
+```text
+┌─────────────────────────────────────────────────────────────┐
+│  Entry points                                                │
+│  cli.py · run.py · gateway/ · apps/mission-control           │
+└──────────────────────────┬──────────────────────────────────┘
+                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│  AIAgent  (run_agent.py + agent/)                            │
+│  prompt · provider · tool dispatch · council · chamber       │
+└──────────────┬───────────────────────────┬──────────────────┘
+               ▼                           ▼
+     SessionDB + memory              tools/ + toolsets.py
+     skills/                         gateway/ · plugins/
 ```
-you ──► Mission Control UI / CLI / API
-              │
-              ▼
-         Vortex Agent (chief)
-              │
-     ┌────────┴────────┐
-     ▼                 ▼
- Solo mission     Agent Council (24 seats)
- plan→act→obs     brief→propose→critique→vote
-                         │
-                         ▼
-                  Council Chamber
-                  parallel seat AIAgents
-                         │
-                         ▼
-                  Chief merge → FINAL.md
+
+## Layout (Hermes-aligned)
+
+| Hermes | Vortex Agent |
+|--------|----------------|
+| `run_agent.py` | `run_agent.py` |
+| `cli.py` | `cli.py` |
+| `agent/` | `agent/` |
+| `tools/` | `tools/` |
+| `toolsets.py` | `toolsets.py` |
+| `model_tools.py` | `model_tools.py` |
+| `gateway/` | `gateway/` |
+| `hermes_cli/` | `vortex_cli/` |
+| `skills/` | `skills/` |
+| `cron/` | `cron/` |
+| `plugins/` | `plugins/` |
+| `apps/` | `apps/mission-control/` |
+| `hermes` binary | `bin/vortex` |
+| `hermes_constants.py` | `vortex_constants.py` |
+
+```text
+vortex-agent-/
+├── agent/                 # core: AIAgent, council, chamber, memory
+├── tools/                 # self-registering tool belt
+├── toolsets.py
+├── model_tools.py
+├── gateway/               # FastAPI Mission Control API
+├── vortex_cli/            # CLI implementation
+├── skills/                # SKILL.md playbooks
+├── cron/ plugins/ apps/
+├── run_agent.py cli.py run.py
+├── vortex_constants.py utils.py
+├── bin/vortex
+├── vortex/                # python -m vortex facade
+└── pyproject.toml
 ```
 
 ## Quick start
 
 ```bash
-# from repo root
 python3 -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-
-# Mission Control UI + API  →  http://localhost:8765
-python run.py
-
-# or
-python -m vortex serve 8765
-python run.py cli
-python run.py doctor
-```
-
-Install as a package:
-
-```bash
 pip install -e .
-vortex-agent              # UI + API
-vortex-agent cli
-vortex-agent doctor
+
+python run.py doctor
+python run.py                 # http://localhost:8765
+python run.py cli
+python run_agent.py "Calculate 2+2"
+python run_agent.py --council "Research X and write a report"
+./bin/vortex version
 ```
 
-### Optional real LLM
+### Optional LLM
 
 ```bash
 export OPENAI_API_KEY=sk-...
-# or ANTHROPIC_API_KEY
-# or OpenAI-compatible:
-export VORTEX_API_KEY=...
-export VORTEX_BASE_URL=https://api.example.com/v1
-export VORTEX_MODEL=gpt-4o-mini
+# or ANTHROPIC_API_KEY / VORTEX_API_KEY + VORTEX_BASE_URL
 ```
 
-Without keys, the **offline planner** still runs full multi-step missions and chamber workers.
+Offline planner works with no keys.
 
-## What it is
+## Runtime features
 
-| Layer | What it does |
-|-------|----------------|
-| **Vortex Agent chief** | Autonomous ReAct loop — plan → tool → observe → finish |
-| **24-seat Council** | Project-inspired seats deliberate and vote |
-| **Council Chamber** | Parallel seat workers execute with scoped toolsets |
-| **Chief merge** | Combines chamber artifacts into `FINAL.md` |
-| **Tools** | web, code, files, shell, memory, stego, council… |
-| **Memory** | SQLite sessions + FTS5, vector recall, `MEMORY.md` |
-| **Skills** | Bundled `SKILL.md` playbooks + learned skills |
-
-## Agent Council
-
-Twenty-four weighted seats (Prime, Zero, Buzz, Hermes, QM, Eve, Odysseus, OpenWorker, Grok, Notebook, LifeOS, Opik, DSPy, Kitesurf, Memory, Cognee, Multica, Alook, AgentOffice, OfficeCLI, OpenWork, Claw3D, AIOffice, Ruflo).
-
-Pipeline:
-
-**brief → propose → critique → vote → chamber (parallel seat agents) → chief merge**
-
-Prime + Hermes hard-veto harmful goals.
+- **Autonomous chief** — plan → act → observe
+- **24-seat Agent Council** — project-inspired personas vote
+- **Council Chamber** — parallel seat `AIAgent` workers write artifacts
+- **Chief merge** — `~/.vortex/workspace/council/<id>/FINAL.md`
+- **Tools** — web, code, files, shell, memory, stego, council…
+- **Skills** — bundled + learned `SKILL.md` / JSON skills
+- **Mission Control UI** — live thought/tool/chamber trace
 
 ## API
 
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Liveness |
-| `GET` | `/api/meta` | Product, tools, bots, seats |
-| `POST` | `/api/missions` | Solo autonomous mission |
-| `POST` | `/api/council` | `{ "goal", "auto_execute", "use_chamber", "wait?" }` |
-| `GET` | `/api/council/seats` | Seat catalog |
-| `GET` | `/api/missions/{id}/stream` | SSE live trace |
-| `POST` | `/api/chat` | Chief chat |
-| `WS` | `/ws` | Realtime event hub |
+| `GET` | `/api/meta` | Product + seats + tools |
+| `POST` | `/api/missions` | Solo mission |
+| `POST` | `/api/council` | Council + chamber |
+| `WS` | `/ws` | Realtime events |
 | `GET` | `/docs` | OpenAPI |
-
-## CLI
-
-```
-/auto <goal>        solo mission
-/council <goal>     deliberate → chamber → execute
-/seats              list council
-/missions /tools /skills
-@researcher …       address a specialist bot
-```
-
-## Layout
-
-```
-vortex/
-├── agent/           # AIAgent, council, chamber, memory, skills, OS
-├── tools/           # self-registering tool belt
-├── toolsets.py      # named presets
-├── skills/          # bundled SKILL.md playbooks
-├── gateway/         # FastAPI + SSE + WS
-├── cli/             # interactive shell
-├── frontend/        # Mission Control UI
-└── __main__.py      # python -m vortex
-run.py               # repo entrypoint
-pyproject.toml       # installable package
-```
 
 ## Workspace
 
-`~/.vortex/` (override with `VORTEX_HOME`)
+`~/.vortex/` (`VORTEX_HOME` override)
 
-```
-workspace/council/<id>/   chamber artifacts + FINAL.md
-workspace/reports/        research outputs
-memory/                   MEMORY.md + vectors
-vortex.db                 sessions · steps · FTS5
-skills/                   learned skills
+```text
+workspace/council/<id>/   chamber outputs + FINAL.md
+workspace/reports/
+memory/
+vortex.db
+skills/
 ```
 
 ## License
 
 MIT © 2026 Sanath S Patil
 
-Architecture inspired by [Hermes Agent](https://github.com/NousResearch/hermes-agent) (Nous Research) and a council of open-source agent projects — not a fork of their codebases.
+Layout and architecture patterns inspired by [Hermes Agent](https://github.com/NousResearch/hermes-agent) — not a fork of the Hermes codebase.

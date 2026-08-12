@@ -5,8 +5,8 @@ import json
 import sys
 import time
 
-from vortex.agent.os import VortexOS
-from vortex.constants import NAME, VERSION, TAGLINE
+from agent.os import VortexOS
+from vortex_constants import NAME, VERSION, TAGLINE
 
 
 BANNER = f"""

@@ -4,7 +4,7 @@ from __future__ import annotations
 import re
 import subprocess
 
-from vortex.constants import WORKSPACE, ensure_home
+from vortex_constants import WORKSPACE, ensure_home
 from .registry import registry
 
 ensure_home()

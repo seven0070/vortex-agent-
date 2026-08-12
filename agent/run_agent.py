@@ -9,14 +9,14 @@ import traceback
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from vortex.agent.llm import LLMBrain, parse_action
-from vortex.agent.prompt_builder import build_system_prompt
-from vortex.constants import WORKSPACE
-from vortex.toolsets import resolve_many
-from vortex.tools.registry import registry
+from agent.llm import LLMBrain, parse_action
+from agent.prompt_builder import build_system_prompt
+from vortex_constants import WORKSPACE
+from toolsets import resolve_many
+from tools.registry import registry
 
 # Ensure tools are registered
-import vortex.tools  # noqa: F401
+import tools  # noqa: F401
 
 EventCB = Callable[[dict], None]
 
@@ -45,10 +45,10 @@ class AIAgent:
         brain: Optional[LLMBrain] = None,
         council=None,
     ):
-        from vortex.agent.state import SessionDB
-        from vortex.agent.vector_memory import VectorMemory
-        from vortex.agent.skills import SkillHub
-        from vortex.agent.memory_provider import BuiltinMemory
+        from agent.state import SessionDB
+        from agent.vector_memory import VectorMemory
+        from agent.skills import SkillHub
+        from agent.memory_provider import BuiltinMemory
 
         self.session_db = session_db or SessionDB()
         self.vector = vector or VectorMemory()

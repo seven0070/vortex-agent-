@@ -5,7 +5,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import List, Optional
 
-from vortex.constants import MEMORY_DIR, ensure_home
+from vortex_constants import MEMORY_DIR, ensure_home
 
 
 class BuiltinMemory:

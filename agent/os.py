@@ -4,16 +4,16 @@ from __future__ import annotations
 import threading
 from typing import Callable, Dict, List, Optional, Set
 
-from vortex.agent.council import AgentCouncil
-from vortex.agent.llm import LLMBrain
-from vortex.agent.memory_provider import BuiltinMemory
-from vortex.agent.run_agent import AIAgent
-from vortex.agent.skills import SkillHub
-from vortex.agent.state import SessionDB
-from vortex.agent.vector_memory import VectorMemory
-from vortex.constants import ensure_home
-from vortex.tools.registry import registry
-import vortex.tools  # noqa: F401
+from agent.council import AgentCouncil
+from agent.llm import LLMBrain
+from agent.memory_provider import BuiltinMemory
+from agent.run_agent import AIAgent
+from agent.skills import SkillHub
+from agent.state import SessionDB
+from agent.vector_memory import VectorMemory
+from vortex_constants import ensure_home
+from tools.registry import registry
+import tools  # noqa: F401
 
 
 class VortexBot:

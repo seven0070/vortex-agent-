@@ -9,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-from vortex.constants import STATE_DB, ensure_home
+from vortex_constants import STATE_DB, ensure_home
 
 
 class SessionDB:

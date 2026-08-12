@@ -23,7 +23,7 @@ def delegate_task(
     if parent is None:
         return {"status": "error", "error": "No parent agent in context.", "data": {}}
 
-    from vortex.agent.run_agent import AIAgent
+    from agent.run_agent import AIAgent
 
     child_toolsets = [toolset] if toolset else ["core"]
     child = AIAgent(

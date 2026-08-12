@@ -7,7 +7,7 @@ from collections import Counter
 from pathlib import Path
 from typing import List, Optional
 
-from vortex.constants import MEMORY_DIR, ensure_home
+from vortex_constants import MEMORY_DIR, ensure_home
 
 
 def _tokenize(t: str):

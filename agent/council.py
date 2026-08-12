@@ -41,7 +41,7 @@ from dataclasses import asdict, dataclass, field
 from datetime import datetime
 from typing import Any, Callable, Dict, List, Optional, Set
 
-from vortex.agent.llm import LLMBrain
+from agent.llm import LLMBrain
 
 
 EventCB = Callable[[dict], None]
@@ -1818,7 +1818,7 @@ class AgentCouncil:
         # ── Chamber path: real parallel seat agents ─────────────────────
         if session.use_chamber and self.seat_worker_factory is not None:
             try:
-                from vortex.agent.chamber import CouncilChamber
+                from agent.chamber import CouncilChamber
 
                 chamber = CouncilChamber(
                     executor_factory=self.seat_worker_factory,

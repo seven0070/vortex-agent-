@@ -8,7 +8,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from vortex.constants import BUNDLED_SKILLS, SKILLS_DIR, ensure_home
+from vortex_constants import BUNDLED_SKILLS, SKILLS_DIR, ensure_home
 
 
 def _parse_skill_md(path: Path) -> dict:

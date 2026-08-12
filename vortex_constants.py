@@ -1,12 +1,15 @@
-"""Vortex Agent paths and identity."""
+"""Vortex Agent paths and identity (Hermes-style root constants module)."""
 from __future__ import annotations
 
 import os
 from pathlib import Path
 
 NAME = "Vortex Agent"
-VERSION = "2.0.0"
-TAGLINE = "Autonomous multi-agent OS · 24-seat council chamber"
+VERSION = "2.1.0"
+TAGLINE = "Autonomous multi-agent OS · Hermes layout · 24-seat council chamber"
+
+# Repo root (this file lives at repository root)
+REPO_ROOT = Path(__file__).resolve().parent
 
 VORTEX_HOME = Path(os.environ.get("VORTEX_HOME", Path.home() / ".vortex")).expanduser()
 WORKSPACE = VORTEX_HOME / "workspace"
@@ -20,10 +23,11 @@ STATE_DB = VORTEX_HOME / "vortex.db"
 CONFIG_PATH = VORTEX_HOME / "config.yaml"
 ENV_PATH = VORTEX_HOME / ".env"
 
-# Bundled skills + frontend ship with the package
-PACKAGE_ROOT = Path(__file__).resolve().parent
-BUNDLED_SKILLS = PACKAGE_ROOT / "skills"
-FRONTEND_DIR = PACKAGE_ROOT / "frontend"
+# Bundled assets at Hermes-style top level
+BUNDLED_SKILLS = REPO_ROOT / "skills"
+FRONTEND_DIR = REPO_ROOT / "apps" / "mission-control"
+# Back-compat alias
+PACKAGE_ROOT = REPO_ROOT
 
 
 def ensure_home() -> Path:

@@ -41,3 +41,8 @@ Thumbs.db
 
 # Vortex local state (lives in $HOME/.vortex, but just in case)
 .vortex/
+
+# Local Hermes reference clone (not part of Vortex ship)
+hermes-agent-ref/
+.venv/
+*.egg-info/

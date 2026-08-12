@@ -9,7 +9,7 @@ import subprocess
 import sys
 import tempfile
 
-from vortex.constants import WORKSPACE, ensure_home
+from vortex_constants import WORKSPACE, ensure_home
 from .registry import registry
 
 ensure_home()

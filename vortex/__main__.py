@@ -1,10 +1,9 @@
-"""python -m vortex  |  vortex  |  vortex-agent
+"""python -m vortex | ./bin/vortex
 
-Usage:
-  python -m vortex                 # Mission Control API+UI on :8765
-  python -m vortex 9000            # custom port
-  python -m vortex cli             # interactive CLI
-  python -m vortex doctor          # environment check
+  python -m vortex                 # Mission Control on :8765
+  python -m vortex 9000
+  python -m vortex cli
+  python -m vortex doctor
   python -m vortex version
 """
 from __future__ import annotations
@@ -12,28 +11,28 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-# Ensure repo root is importable when run as a script path
-_ROOT = Path(__file__).resolve().parent.parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+ROOT = Path(__file__).resolve().parent.parent
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
 
 
 def _version() -> None:
-    from vortex.constants import NAME, VERSION, TAGLINE
+    from vortex_constants import NAME, VERSION, TAGLINE
 
     print(f"{NAME} v{VERSION}")
     print(TAGLINE)
 
 
 def _doctor() -> int:
-    from vortex.constants import NAME, VERSION, VORTEX_HOME, WORKSPACE, ensure_home
-    from vortex.agent.os import VortexOS
-    from vortex.tools.registry import registry
-    import vortex.tools  # noqa: F401
+    from vortex_constants import NAME, VERSION, VORTEX_HOME, WORKSPACE, ensure_home
+    from agent.os import VortexOS
+    from tools.registry import registry
+    import tools  # noqa: F401
 
     ensure_home()
     print(f"🩺 {NAME} doctor")
     print(f"  version   : {VERSION}")
+    print(f"  layout    : hermes-style (agent/ tools/ gateway/ skills/ …)")
     print(f"  home      : {VORTEX_HOME}")
     print(f"  workspace : {WORKSPACE}")
     print(f"  python    : {sys.version.split()[0]}")
@@ -44,7 +43,6 @@ def _doctor() -> int:
         print(f"  tools     : {len(registry.names())}")
         print(f"  brain     : {os_.brain.provider}")
         print(f"  chamber   : {'on' if os_.council.seat_worker_factory else 'off'}")
-        # tiny smoke
         r = os_.agent.run("Calculate 1+1", background=False, max_steps=4)
         ok = r.get("status") == "completed"
         print(f"  smoke     : {'pass' if ok else 'fail'} ({r.get('status')})")
@@ -58,7 +56,7 @@ def _doctor() -> int:
 def main(argv: list[str] | None = None) -> None:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
-        from vortex.gateway.api import main as api_main
+        from gateway.api import main as api_main
 
         api_main([])
         return
@@ -73,20 +71,18 @@ def main(argv: list[str] | None = None) -> None:
     if cmd == "doctor":
         raise SystemExit(_doctor())
     if cmd in ("cli", "tui", "shell"):
-        from vortex.cli.main import main as cli_main
+        from vortex_cli.main import main as cli_main
 
         sys.argv = [sys.argv[0], *argv[1:]]
         cli_main()
         return
     if cmd in ("serve", "api", "ui"):
-        from vortex.gateway.api import main as api_main
+        from gateway.api import main as api_main
 
         api_main(argv[1:])
         return
-
-    # bare port number → serve
     if cmd.isdigit():
-        from vortex.gateway.api import main as api_main
+        from gateway.api import main as api_main
 
         api_main(argv)
         return

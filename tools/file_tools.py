@@ -5,7 +5,7 @@ import re
 from pathlib import Path
 from typing import Optional
 
-from vortex.constants import WORKSPACE, ensure_home
+from vortex_constants import WORKSPACE, ensure_home
 from .registry import registry
 
 ensure_home()
