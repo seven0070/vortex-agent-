@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Vortex — Rapid Self-Improvement</title>
+  <title>Vortex — Full Architecture 0.4.0</title>
   <style>
     :root {
       --bg: #07080b;
@@ -16,24 +16,26 @@
       --green: #34d399;
       --red: #fb7185;
       --blue: #7dd3fc;
+      --purple: #a78bfa;
     }
     * { box-sizing: border-box; }
-    html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
-      font: 14px/1.45 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
+    html, body { margin: 0; min-height: 100%; background: var(--bg); color: var(--ink);
+      font: 13px/1.45 "IBM Plex Sans", "Segoe UI", system-ui, sans-serif; }
     body {
       background-image:
         radial-gradient(900px 400px at 10% -10%, rgba(249,115,22,.16), transparent 50%),
-        radial-gradient(700px 360px at 100% 0%, rgba(56,189,248,.08), transparent 45%);
+        radial-gradient(700px 360px at 100% 0%, rgba(56,189,248,.08), transparent 45%),
+        radial-gradient(500px 300px at 50% 120%, rgba(167,139,250,.08), transparent 50%);
     }
     header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 16px 22px; border-bottom: 1px solid var(--line);
+      padding: 14px 20px; border-bottom: 1px solid var(--line); position: sticky; top:0; background: rgba(7,8,11,.9); backdrop-filter: blur(8px); z-index:10;
     }
     .brand { display: flex; gap: 12px; align-items: center; }
     .mark {
-      width: 36px; height: 36px; border-radius: 10px;
+      width: 38px; height: 38px; border-radius: 12px;
       background: conic-gradient(from 120deg, #f97316, #fb923c, #7c2d12, #f97316);
-      display: grid; place-items: center; font-size: 18px;
+      display: grid; place-items: center; font-size: 20px;
       box-shadow: 0 0 24px rgba(249,115,22,.35);
     }
     h1 { font-size: 16px; margin: 0; letter-spacing: .04em; }
@@ -41,63 +43,74 @@
     .pills { display: flex; gap: 8px; flex-wrap: wrap; }
     .pill {
       border: 1px solid var(--line); background: var(--panel);
-      border-radius: 999px; padding: 4px 10px; color: var(--muted); font-size: 12px;
+      border-radius: 999px; padding: 4px 10px; color: var(--muted); font-size: 11px;
     }
     .pill b { color: var(--orange); font-weight: 600; }
-    main {
-      display: grid;
-      grid-template-columns: 1.1fr .9fr;
-      grid-template-rows: auto 1fr;
-      gap: 14px; padding: 14px; height: calc(100% - 69px);
+    .pill.green b { color: var(--green); }
+    .pill.blue b { color: var(--blue); }
+    .pill.purple b { color: var(--purple); }
+
+    main { padding: 14px; display: grid; gap: 14px; }
+
+    .arch-diag {
+      background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
+      padding: 14px; font-family: monospace; font-size: 11px; line-height: 1.3; white-space: pre; overflow:auto;
+      color: var(--muted);
     }
-    .cards { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+    .arch-diag b { color: var(--orange); }
+
+    .cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
     .card {
       background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
-      padding: 14px 16px;
+      padding: 12px 14px;
     }
-    .card .k { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
-    .card .v { font-size: 28px; font-weight: 650; margin-top: 6px; }
+    .card .k { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+    .card .v { font-size: 22px; font-weight: 650; margin-top: 4px; }
     .card .v em { font-style: normal; color: var(--orange); }
+
+    .grid-2 { display: grid; grid-template-columns: 1.2fr .8fr; gap: 14px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; }
+    @media (max-width: 1100px) { .grid-2, .grid-3 { grid-template-columns: 1fr; } }
+
     .panel {
       background: var(--panel); border: 1px solid var(--line); border-radius: 14px;
       display: flex; flex-direction: column; min-height: 0;
     }
     .panel h2 {
-      margin: 0; padding: 12px 14px; font-size: 13px; letter-spacing: .06em;
+      margin: 0; padding: 10px 12px; font-size: 11px; letter-spacing: .06em;
       text-transform: uppercase; color: var(--muted); border-bottom: 1px solid var(--line);
       display: flex; justify-content: space-between; align-items: center;
     }
-    .chat { padding: 12px; overflow: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; }
-    .bubble { max-width: 92%; padding: 10px 12px; border-radius: 12px; white-space: pre-wrap; }
+    .chat { padding: 12px; overflow: auto; flex: 1; display: flex; flex-direction: column; gap: 10px; min-height: 260px; max-height: 420px; }
+    .bubble { max-width: 92%; padding: 9px 11px; border-radius: 12px; white-space: pre-wrap; font-size: 13px; }
     .me { align-self: flex-end; background: var(--orange-dim); border: 1px solid rgba(249,115,22,.35); }
     .bot { align-self: flex-start; background: #161a22; border: 1px solid var(--line); }
     .composer { display: flex; gap: 8px; padding: 10px; border-top: 1px solid var(--line); }
-    input, button {
-      font: inherit; border-radius: 10px; border: 1px solid var(--line); background: #0c0e14; color: var(--ink);
+    input, button, select {
+      font: inherit; border-radius: 9px; border: 1px solid var(--line); background: #0c0e14; color: var(--ink);
     }
-    input { flex: 1; padding: 10px 12px; outline: none; }
+    input { flex: 1; padding: 9px 11px; outline: none; }
     input:focus { border-color: var(--orange); }
     button {
-      padding: 10px 14px; cursor: pointer; background: var(--orange); color: #1a0b00;
-      border: 0; font-weight: 650;
+      padding: 8px 12px; cursor: pointer; background: var(--orange); color: #1a0b00;
+      border: 0; font-weight: 650; font-size: 12px;
     }
     button.ghost { background: transparent; color: var(--ink); border: 1px solid var(--line); font-weight: 500; }
     button:disabled { opacity: .5; cursor: wait; }
-    .list { overflow: auto; flex: 1; padding: 8px; }
+    .list { overflow: auto; flex: 1; padding: 6px; max-height: 340px; }
     .row {
-      padding: 8px 10px; border-bottom: 1px solid var(--line); display: grid;
-      grid-template-columns: 72px 1fr auto; gap: 8px; align-items: start;
+      padding: 7px 9px; border-bottom: 1px solid var(--line); display: grid;
+      grid-template-columns: 70px 1fr auto; gap: 8px; align-items: start; font-size: 12px;
     }
-    .tag { font-size: 11px; color: var(--orange); }
-    .ok { color: var(--green); }
-    .bad { color: var(--red); }
-    .muted { color: var(--muted); }
-    .tiny { font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+    .tag { font-size: 10px; color: var(--orange); text-transform: uppercase; }
+    .ok { color: var(--green); } .bad { color: var(--red); } .muted { color: var(--muted); }
+    .tiny { font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; }
+    .mono { font-family: monospace; font-size: 11px; }
+    .badge { display:inline-block; padding:2px 6px; border-radius:999px; background: #1f232f; border:1px solid var(--line); font-size:10px; color: var(--muted); margin-right:4px; }
+    .badge.orange { color: var(--orange); border-color: rgba(249,115,22,.4); }
+    .badge.green { color: var(--green); }
+    .badge.blue { color: var(--blue); }
     .split { display: grid; grid-template-rows: 1fr 1fr; gap: 14px; min-height: 0; }
-    @media (max-width: 980px) {
-      main { grid-template-columns: 1fr; height: auto; }
-      .cards { grid-template-columns: 1fr 1fr; }
-    }
   </style>
 </head>
 <body>
@@ -105,49 +118,119 @@
     <div class="brand">
       <div class="mark">🌪️</div>
       <div>
-        <h1>VORTEX <span>rapid self-improvement</span></h1>
-        <div class="muted" id="sub">observe → rescue → reflect → eval → promote</div>
+        <h1>VORTEX <span>0.4.0 — full architecture</span></h1>
+        <div class="muted" style="font-size:11px;">Sovereign → Governance → Resolution → Council → Orchestration → Memory + Tools → Self-Improvement</div>
       </div>
     </div>
     <div class="pills">
       <div class="pill">gen <b id="gen">—</b></div>
       <div class="pill">lessons <b id="nlessons">—</b></div>
       <div class="pill">avg <b id="avg">—</b></div>
+      <div class="pill green">tools <b id="ntools">—</b></div>
+      <div class="pill blue">council <b id="ncouncil">—</b></div>
+      <div class="pill purple">graph <b id="ngraph">—</b></div>
     </div>
   </header>
+
   <main>
+    <div class="arch-diag"><b>                    ┌──────────────────────┐
+                    │      INTERFACE       │
+                    │  Web / Desktop / CLI │
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │      SOVEREIGN       │  identity/objectives/state/priorities/lifecycle
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │      GOVERNANCE      │  policy/risk/permissions/approvals/audit (OPA-style)
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │      RESOLUTION      │  correctness/reliability/evidence/cost/latency/risk
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │       COUNCIL        │  Researcher/Planner/Engineer/Critic/Security/Strategist/Verifier
+                    └──────────┬───────────┘
+                               │
+                    ┌──────────▼───────────┐
+                    │    ORCHESTRATION     │  stateful graph: understand/plan/decompose/route/execute/observe/evaluate/recover/resolve
+                    └───────┬───────┬──────┘
+                            │       │
+                 ┌──────────▼─┐ ┌─▼──────────┐
+                 │   MEMORY   │ │   TOOLS    │  filesystem/browser/shell/github/database/web/code/communication/external
+                 │ graph/RAG  │ │ MCP/etc.   │  7 layers: working/episodic/semantic/procedural/user/agent + KG
+                 └────────────┘ └────────────┘
+
+                         ↕
+                SELF-IMPROVEMENT      Observe → Weakness → Hypothesis → Candidate → Sandbox → Tests → Security → Compare → Canary → Deploy → Monitor → Rollback
+                         ↕
+              EVALUATION + TELEMETRY   Vortex Benchmark: reasoning/planning/tool_selection/coding/memory/multi_agent/reliability/safety/cost/latency/regression
+                         ↕
+                  NEW GENERATION       v001/v002/v003 — evolution_record.json
+</b></div>
+
     <section class="cards">
       <div class="card"><div class="k">Generation</div><div class="v" id="cgen">—</div></div>
       <div class="card"><div class="k">Eval score</div><div class="v"><em id="cscore">—</em></div></div>
       <div class="card"><div class="k">Active lessons</div><div class="v" id="cless">—</div></div>
       <div class="card"><div class="k">Router tokens</div><div class="v" id="crout">—</div></div>
+      <div class="card"><div class="k">Knowledge nodes</div><div class="v" id="cgraph">—</div></div>
+      <div class="card"><div class="k">Tool categories</div><div class="v" id="ctools">—</div></div>
+      <div class="card"><div class="k">Sovereign mode</div><div class="v" id="csov">—</div></div>
+      <div class="card"><div class="k">Governance</div><div class="v" id="cgov">—</div></div>
     </section>
 
-    <section class="panel">
-      <h2>
-        Swarm chat
-        <span>
-          <button class="ghost" id="btnEval" type="button">Run eval</button>
-          <button id="btnCycle" type="button">Improve cycle</button>
-        </span>
-      </h2>
-      <div class="chat" id="chat"></div>
-      <form class="composer" id="form">
-        <input id="msg" autocomplete="off" placeholder="Try: what is 12 times 8  ·  fibonacci of 10  ·  /evolve" />
-        <button type="submit">Send</button>
-      </form>
-    </section>
-
-    <div class="split">
+    <div class="grid-2">
       <section class="panel">
-        <h2>Lessons learned</h2>
-        <div class="list" id="lessons"></div>
+        <h2>
+          Swarm chat
+          <span>
+            <select id="mode" style="padding:6px 8px; font-size:11px;">
+              <option value="fast">Fast (chief)</option>
+              <option value="orchestrated">Orchestrated (graph)</option>
+              <option value="council">Council deliberate</option>
+            </select>
+            <button class="ghost" id="btnEval" type="button">Eval</button>
+            <button class="ghost" id="btnBench" type="button">Benchmark</button>
+            <button id="btnCycle" type="button">Improve cycle</button>
+          </span>
+        </h2>
+        <div class="chat" id="chat"></div>
+        <form class="composer" id="form">
+          <input id="msg" autocomplete="off" placeholder="what is 12 times 8 · fibonacci of 10 · orchestrate: research and build fibonacci · /deliberate my goal" />
+          <button type="submit">Send</button>
+        </form>
+      </section>
+
+      <div class="split">
+        <section class="panel">
+          <h2>Lessons learned</h2>
+          <div class="list" id="lessons"></div>
+        </section>
+        <section class="panel">
+          <h2>Recent traces + telemetry</h2>
+          <div class="list" id="traces"></div>
+        </section>
+      </div>
+    </div>
+
+    <div class="grid-3">
+      <section class="panel">
+        <h2>Council</h2>
+        <div class="list" id="council"></div>
       </section>
       <section class="panel">
-        <h2>Recent traces</h2>
-        <div class="list" id="traces"></div>
+        <h2>Memory Graph + Tools</h2>
+        <div class="list" id="memgraph"></div>
+      </section>
+      <section class="panel">
+        <h2>Governance + Sovereign + Observability</h2>
+        <div class="list" id="gov"></div>
       </section>
     </div>
+
   </main>
   <script>
     const $ = (id) => document.getElementById(id);
@@ -191,7 +274,39 @@
     }
 
     async function refresh() {
-      renderStatus(await j("/api/rsi"));
+      const s = await j("/api/rsi");
+      renderStatus(s);
+      const stats = await j("/api/stats");
+      $("cgraph").textContent = stats.graph ? `${stats.graph.nodes} nodes` : "—";
+      $("ngraph").textContent = stats.graph ? stats.graph.nodes : "—";
+      $("ctools").textContent = stats.tools ? Object.keys(stats.tools).length + " cats" : "—";
+      $("ntools").textContent = stats.tools ? Object.values(stats.tools).flat().length : "—";
+      $("csov").textContent = stats.sovereign ? stats.sovereign.state.mode : "—";
+      $("cgov").textContent = stats.governance ? stats.governance.total + " audits" : "—";
+      $("ncouncil").textContent = stats.council ? stats.council.members.length : "—";
+
+      // council panel
+      if (stats.council) {
+        $("council").innerHTML = `
+          <div class="row"><div class="tag">members</div><div>${stats.council.members.join(", ")}</div><div></div></div>
+          <div class="row"><div class="tag">weights</div><div class="mono">${JSON.stringify(stats.council.weights)}</div><div></div></div>
+        `;
+      }
+      if (stats.tools) {
+        let html = "";
+        for (const [cat, names] of Object.entries(stats.tools)) {
+          html += `<div class="row"><div class="tag">${cat}</div><div>${names.slice(0,6).join(", ")}</div><div class="muted">${names.length}</div></div>`;
+        }
+        $("memgraph").innerHTML = html + (stats.knowledge_graph ? `<div class="row"><div class="tag">graph</div><div>${stats.knowledge_graph.nodes} nodes, ${stats.knowledge_graph.edges} edges</div><div></div></div>` : "");
+      }
+      if (stats.sovereign || stats.governance || stats.metrics) {
+        let html = "";
+        if (stats.sovereign) html += `<div class="row"><div class="tag">sovereign</div><div>${stats.sovereign.identity.name} v${stats.sovereign.identity.version} / ${stats.sovereign.state.mode} / ${stats.sovereign.objectives.length} objs</div><div></div></div>`;
+        if (stats.governance) html += `<div class="row"><div class="tag">governance</div><div>${stats.governance.total} audits, decisions: ${JSON.stringify(stats.governance.decisions)}</div><div></div></div>`;
+        if (stats.metrics) html += `<div class="row"><div class="tag">metrics</div><div class="mono">${JSON.stringify(stats.metrics.counters).slice(0,180)}</div><div></div></div>`;
+        if (stats.traces) html += `<div class="row"><div class="tag">otel</div><div>${stats.traces.length} traces, last: ${(stats.traces[0]?.goal||'').slice(0,40)}</div><div></div></div>`;
+        $("gov").innerHTML = html || '<div class="row muted">loading...</div>';
+      }
     }
 
     $("form").addEventListener("submit", async (e) => {
@@ -200,13 +315,15 @@
       if (!text) return;
       $("msg").value = "";
       bubble(text, "me");
+      const mode = $("mode").value;
       try {
-        const data = await j("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ message: text }),
-        });
-        bubble(data.response, "bot");
+        let url = "/api/chat";
+        let body = { message: text };
+        if (mode === "orchestrated") { url = "/api/chat/orchestrated"; }
+        if (mode === "council") { url = "/api/council/deliberate"; body = { message: text }; }
+        const data = await j(url, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify(body)});
+        const resp = data.response || data.final || JSON.stringify(data).slice(0,800);
+        bubble(resp, "bot");
       } catch (err) {
         bubble("error: " + err.message, "bot");
       }
@@ -215,10 +332,10 @@
 
     $("btnCycle").addEventListener("click", async () => {
       $("btnCycle").disabled = true;
-      bubble("Running improvement cycle (eval → mutate → promote or revert)…", "bot");
+      bubble("Running evolution cycle (Observe→Weakness→Hypothesis→Candidate→Sandbox→Benchmark→Security→Canary→Deploy)…", "bot");
       try {
         const c = await j("/api/rsi/cycle", { method: "POST" });
-        bubble(`${c.decision}: ${c.notes}`, "bot");
+        bubble(`${c.decision}: ${c.notes}\nEvolution: ${c.evolution ? c.evolution.decision + ' ' + (c.evolution.reason||'') : ''}`, "bot");
       } catch (err) {
         bubble("cycle failed: " + err.message, "bot");
       }
@@ -230,7 +347,7 @@
       $("btnEval").disabled = true;
       try {
         const e = await j("/api/rsi/eval", { method: "POST" });
-        const lines = e.cases.map(c => `${c.ok ? "✔" : "✘"} ${c.name}`).join("\n");
+        const lines = e.cases.map(c => `${c.ok ? "✔" : "✘"} ${c.name} (${c.category})`).join("\n");
         bubble(`eval ${e.passed}/${e.total}  score=${e.score}\n${lines}`, "bot");
       } catch (err) {
         bubble("eval failed: " + err.message, "bot");
@@ -239,8 +356,22 @@
       refresh();
     });
 
-    bubble("Vortex online. Ask a natural-language math question or hide a payload — the improver will rescue misses and remember them.", "bot");
+    $("btnBench").addEventListener("click", async () => {
+      $("btnBench").disabled = true;
+      try {
+        const e = await j("/api/rsi/eval/benchmark", { method: "POST" });
+        const lines = Object.entries(e.breakdown||{}).map(([k,v]) => `${v.passed}/${v.total} ${k} ${v.score}`).join("\n");
+        bubble(`Vortex Benchmark ${e.passed}/${e.total} score=${e.score}\n${lines}`, "bot");
+      } catch (err) {
+        bubble("benchmark failed: " + err.message, "bot");
+      }
+      $("btnBench").disabled = false;
+      refresh();
+    });
+
+    bubble("Vortex 0.4.0 online. Full architecture: Sovereign → Governance → Resolution → Council → Orchestration → Memory Graph + Tools → Self-Improvement (Evolution Engine). Try: what is 12 times 8, orchestrate: research and build fibonacci, /deliberate my goal, /evolve", "bot");
     refresh();
+    setInterval(refresh, 8000);
   </script>
 </body>
 </html>
