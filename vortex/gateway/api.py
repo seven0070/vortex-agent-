@@ -16,7 +16,7 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel, Field
 
 from vortex.agent.os import VortexOS
-from vortex.constants import NAME, VERSION, WORKSPACE
+from vortex.constants import FRONTEND_DIR, NAME, VERSION, WORKSPACE
 
 
 class ChatRequest(BaseModel):
@@ -103,13 +103,15 @@ app.add_middleware(
 async def health():
     return {
         "status": "healthy",
+        "name": NAME,
         "version": VERSION,
         "bots": len(os_runtime.bots),
         "provider": os_runtime.brain.provider,
         "tools": len(os_runtime.list_tools()),
         "missions": os_runtime.db.stats().get("sessions", 0),
         "council_seats": len(os_runtime.council.seats),
-        "architecture": "hermes-inspired + agent-council",
+        "architecture": "vortex-agent · council-chamber",
+        "chamber": True,
     }
 
 
@@ -121,12 +123,13 @@ async def meta():
         "provider": os_runtime.brain.provider,
         "model": os_runtime.brain.model or "offline-planner",
         "workspace": str(WORKSPACE),
-        "architecture": "hermes-inspired + council-chamber",
+        "architecture": "vortex-agent · council-chamber",
         "tools": os_runtime.list_tools(),
         "bots": os_runtime.list_bots(),
         "skills": os_runtime.skills.list(),
         "council_seats": os_runtime.council.list_seats(),
         "chamber": True,
+        "product": NAME,
     }
 
 
@@ -335,7 +338,8 @@ async def ws_hub(ws: WebSocket):
                     "type": "hello",
                     "provider": os_runtime.brain.provider,
                     "bots": len(os_runtime.bots),
-                    "architecture": "hermes-inspired",
+                    "architecture": "vortex-agent · council-chamber",
+                    "name": NAME,
                 }
             )
         )
@@ -355,8 +359,9 @@ async def ws_hub(ws: WebSocket):
         _ws_clients.discard(ws)
 
 
-# Static UI — prefer package frontend, fall back to legacy path
+# Static UI — package frontend first, then legacy checkout path
 _FRONTEND_CANDIDATES = [
+    FRONTEND_DIR,
     Path(__file__).resolve().parent.parent / "frontend",
     Path(__file__).resolve().parent.parent.parent / "vortex-agent" / "frontend",
 ]

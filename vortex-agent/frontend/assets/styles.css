@@ -61,8 +61,8 @@ body {
 .brand h1 {
   font-family: var(--sans);
   font-weight: 800;
-  letter-spacing: 0.18em;
-  font-size: 18px;
+  letter-spacing: 0.12em;
+  font-size: 16px;
   margin: 0;
   background: linear-gradient(120deg, #fff 0%, var(--orange-2) 60%, var(--cyan) 120%);
   -webkit-background-clip: text; background-clip: text; color: transparent;

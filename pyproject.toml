@@ -1,0 +1,51 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vortex-agent"
+version = "2.0.0"
+description = "Vortex Agent — autonomous multi-agent OS with a 24-seat council chamber"
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Sanath S Patil" }]
+keywords = ["ai", "agent", "multi-agent", "council", "autonomous", "vortex"]
+classifiers = [
+  "Development Status :: 4 - Beta",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "Programming Language :: Python :: 3.12",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dependencies = [
+  "fastapi==0.110.0",
+  "uvicorn==0.27.1",
+  "pydantic==2.6.1",
+]
+
+[project.optional-dependencies]
+vector = ["chromadb>=0.4.22"]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+vortex = "vortex.__main__:main"
+vortex-agent = "vortex.__main__:main"
+
+[project.urls]
+Homepage = "https://github.com/seven0070/vortex-agent-"
+Repository = "https://github.com/seven0070/vortex-agent-"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vortex*"]
+
+[tool.setuptools.package-data]
+vortex = [
+  "frontend/*.html",
+  "frontend/assets/*",
+  "skills/**/*.md",
+  "skills/**/SKILL.md",
+]
