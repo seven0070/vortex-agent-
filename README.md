@@ -1,8 +1,24 @@
 # 🌪️ Vortex Agent
 
-**The autonomous agent that grows with you.**
+**Autonomous agent + AI Council — deliberate, vote, execute.**
 
-Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspired autonomous multi-agent OS: a narrow core waist, capability at the edges (tools · skills · swarm), and a closed learning loop.
+Vortex is a [Hermes Agent](https://github.com/NousResearch/hermes-agent)-inspired autonomous multi-agent OS: a narrow core waist, capability at the edges (tools · skills · swarm · **council**), and a closed learning loop.
+
+### Agent Council
+
+Seven weighted seats deliberate before the chief acts:
+
+| Seat | Persona | Mandate |
+|------|---------|---------|
+| ♟ Atlas | Chief Strategist | Frame goal, criteria, sequencing |
+| 🔍 Lyra | Research Lead | Evidence, unknowns, sources |
+| ⚙ Forge | Systems Architect | Buildable technical path |
+| ⚔ Vex | Red Team Critic | Attack weak plans |
+| 🛡 Aegis | Safety & Ethics | Harm / privacy veto |
+| 🔒 Shade | Security Counsel | Threat model, least privilege |
+| ⚡ Pulse | Execution Officer | Turn vote into action plan |
+
+Pipeline: **brief → propose → critique → vote → chief executes**.
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
@@ -73,21 +89,25 @@ Without keys, the **offline planner** still runs full multi-step missions.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/health` | Liveness |
-| `GET` | `/api/meta` | Provider, tools, bots, skills |
-| `POST` | `/api/missions` | `{ "goal", "max_steps", "wait?" }` |
-| `GET` | `/api/missions` | List sessions |
+| `GET` | `/api/meta` | Provider, tools, bots, skills, council seats |
+| `POST` | `/api/missions` | `{ "goal", "max_steps", "wait?" }` solo agent |
+| `POST` | `/api/council` | `{ "goal", "auto_execute", "seats?", "wait?" }` |
+| `GET` | `/api/council` · `/api/council/{id}` | Council sessions |
+| `GET` | `/api/council/seats` | Persona catalog |
 | `GET` | `/api/missions/{id}/stream` | SSE live trace |
-| `POST` | `/api/chat` | Chief chat (auto-missions) |
+| `POST` | `/api/chat` | Chief chat (auto-council when multi-domain) |
 | `WS` | `/ws` | Realtime event hub |
 | `GET` | `/api/tools` · `/api/skills` | Catalogs |
 
 ## CLI
 
 ```
-/auto <goal>     launch mission with live trace
-/missions        list
-/tools /skills   catalogs
-@researcher …    address a specialist
+/auto <goal>        solo autonomous mission
+/council <goal>     deliberate → vote → execute
+/seats              list council personas
+/missions           list
+/tools /skills      catalogs
+@researcher …       address a specialist
 /bots /spawn /kill
 ```
 

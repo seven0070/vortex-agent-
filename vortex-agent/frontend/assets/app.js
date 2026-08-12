@@ -10,6 +10,8 @@
     bots: [],
     tools: [],
     missions: [],
+    seats: [],
+    mode: "mission", // mission | council
   };
 
   // ── boot ──────────────────────────────────────────────────────────────
@@ -45,7 +47,9 @@
       setPill("pill-bots", "dim", `bots: ${meta.bots?.length ?? health.bots}`);
       state.bots = meta.bots || [];
       state.tools = meta.tools || [];
+      state.seats = meta.council_seats || [];
       renderBots();
+      renderSeats();
       renderTools();
     } catch (e) {
       setPill("pill-health", "bad", "offline");
@@ -107,6 +111,26 @@
         <div class="bot-meta">
           <div class="name">${esc(b.name)}</div>
           <div class="role">${esc(b.role)} · ${b.messages || 0} msgs</div>
+        </div>
+      </li>`
+      )
+      .join("");
+  }
+
+  function renderSeats() {
+    const ul = $("#seat-list");
+    if (!ul) return;
+    $("#seat-count").textContent = String(state.seats.length);
+    ul.innerHTML = state.seats
+      .map(
+        (s) => `
+      <li title="${esc(s.mandate || "")}">
+        <div class="bot-avatar" style="background:linear-gradient(135deg,${esc(
+          s.color || "#f97316"
+        )}44,rgba(34,211,238,0.12))">${esc(s.icon || "◆")}</div>
+        <div class="bot-meta">
+          <div class="name">${esc(s.name)}</div>
+          <div class="role">${esc(s.title)} · w=${esc(s.weight)}</div>
         </div>
       </li>`
       )
@@ -209,9 +233,49 @@
     switch (ev.type) {
       case "mission_queued":
       case "mission_started":
+      case "council_queued":
+      case "council_started":
         clearTraceEmpty();
-        appendStep("system", "0", `Mission ${ev.type.replace("mission_", "")}: ${ev.goal || mid}`);
+        appendStep(
+          "system",
+          "0",
+          `${ev.type.includes("council") ? "Council" : "Mission"} ${ev.type
+            .replace("mission_", "")
+            .replace("council_", "")}: ${ev.goal || mid}`
+        );
         $("#btn-cancel").disabled = false;
+        break;
+      case "council_round":
+        clearTraceEmpty();
+        appendStep(
+          "system",
+          ev.round || "·",
+          `Council round: ${ev.round || "?"} — ${ev.message || ""}`
+        );
+        break;
+      case "council_opinion":
+        clearTraceEmpty();
+        appendStep(
+          "thought",
+          ev.step || "·",
+          `${ev.seat_name || ev.seat} · ${ev.round}: ${ev.summary || ""}`,
+          ev.stance ? `stance=${ev.stance}${ev.vote ? " vote=" + ev.vote : ""}` : ""
+        );
+        break;
+      case "council_consensus":
+        clearTraceEmpty();
+        appendStep(
+          "done",
+          "⚖",
+          `Consensus: ${(ev.winner || "").toUpperCase()}`,
+          ev.tally ? JSON.stringify(ev.tally) : ""
+        );
+        break;
+      case "council_executing":
+        appendStep("tool", "⚡", "Chief executing council directive");
+        break;
+      case "council_completed":
+        if (ev.result) showResult(ev.result);
         break;
       case "thinking":
         // soft indicator — skip noisy duplicates
@@ -248,6 +312,7 @@
         showResult(ev.result || "");
         $("#btn-cancel").disabled = true;
         $("#btn-launch").disabled = false;
+        if ($("#btn-council")) $("#btn-council").disabled = false;
         refreshMissions();
         refreshStats();
         break;
@@ -255,12 +320,14 @@
         appendStep("obs err", "✗", `Failed: ${ev.error || "unknown"}`);
         $("#btn-cancel").disabled = true;
         $("#btn-launch").disabled = false;
+        if ($("#btn-council")) $("#btn-council").disabled = false;
         refreshMissions();
         break;
       case "mission_cancelled":
         appendStep("system", "–", "Mission cancelled");
         $("#btn-cancel").disabled = true;
         $("#btn-launch").disabled = false;
+        if ($("#btn-council")) $("#btn-council").disabled = false;
         refreshMissions();
         break;
       default:
@@ -315,6 +382,8 @@
   // ── actions ───────────────────────────────────────────────────────────
   function bindUi() {
     $("#btn-launch").addEventListener("click", launchMission);
+    const btnCouncil = $("#btn-council");
+    if (btnCouncil) btnCouncil.addEventListener("click", launchCouncil);
     $("#btn-chat").addEventListener("click", () => {
       const g = $("#goal-input").value.trim();
       if (g) sendChat(g);
@@ -362,10 +431,12 @@
       return;
     }
     const maxSteps = Number($("#max-steps").value) || 12;
+    state.mode = "mission";
     resetTrace();
     clearTraceEmpty();
-    appendStep("system", "…", "Launching mission…", goal.slice(0, 120));
+    appendStep("system", "…", "Launching solo mission…", goal.slice(0, 120));
     $("#btn-launch").disabled = true;
+    if ($("#btn-council")) $("#btn-council").disabled = true;
     $("#btn-cancel").disabled = false;
     $("#result-panel").hidden = true;
 
@@ -377,14 +448,121 @@
       state.activeMissionId = mission.id;
       $("#active-mission-label").textContent = `${mission.id} · running`;
       appendStep("system", "0", `Queued ${mission.id}`, `provider: ${mission.provider}`);
-      // also follow via SSE as a reliable fallback
       followSse(mission.id);
       refreshMissions();
     } catch (e) {
       appendStep("obs err", "!", `Failed to launch: ${e.message}`);
       $("#btn-launch").disabled = false;
+      if ($("#btn-council")) $("#btn-council").disabled = false;
       $("#btn-cancel").disabled = true;
     }
+  }
+
+  async function launchCouncil() {
+    const goal = $("#goal-input").value.trim();
+    if (!goal) {
+      $("#goal-input").focus();
+      return;
+    }
+    state.mode = "council";
+    resetTrace();
+    clearTraceEmpty();
+    appendStep("system", "…", "Convening Agent Council…", goal.slice(0, 120));
+    $("#btn-launch").disabled = true;
+    if ($("#btn-council")) $("#btn-council").disabled = true;
+    $("#btn-cancel").disabled = false;
+    $("#result-panel").hidden = true;
+
+    try {
+      const session = await api("/api/council", {
+        method: "POST",
+        body: JSON.stringify({ goal, auto_execute: true, wait: false }),
+      });
+      state.activeMissionId = session.id;
+      $("#active-mission-label").textContent = `council ${session.id} · deliberating`;
+      appendStep(
+        "system",
+        "0",
+        `Council ${session.id} seated`,
+        (session.seats || []).join(", ")
+      );
+      followCouncil(session.id);
+      refreshMissions();
+    } catch (e) {
+      appendStep("obs err", "!", `Failed to convene: ${e.message}`);
+      $("#btn-launch").disabled = false;
+      if ($("#btn-council")) $("#btn-council").disabled = false;
+      $("#btn-cancel").disabled = true;
+    }
+  }
+
+  function followCouncil(cid) {
+    // poll council endpoint (WS also streams council_* events)
+    let n = 0;
+    const tick = async () => {
+      n += 1;
+      try {
+        const s = await api(`/api/council/${cid}`);
+        if (!s) return;
+        if (["completed", "failed", "cancelled"].includes(s.status)) {
+          if (s.directive) {
+            appendStep(
+              "done",
+              "⚖",
+              `Decision: ${(s.directive.decision || "").toUpperCase()}`,
+              s.tally ? JSON.stringify(s.tally) : ""
+            );
+          }
+          const ex = s.execution || {};
+          const body =
+            ex.result ||
+            (s.directive && s.directive.summary) ||
+            s.consensus ||
+            "";
+          if (body) showResult(formatCouncilResult(s));
+          $("#btn-launch").disabled = false;
+          if ($("#btn-council")) $("#btn-council").disabled = false;
+          $("#btn-cancel").disabled = true;
+          $("#active-mission-label").textContent = `council ${cid} · ${s.status}`;
+          refreshMissions();
+          refreshStats();
+          return;
+        }
+      } catch (_) {}
+      if (n < 120) setTimeout(tick, 500);
+    };
+    setTimeout(tick, 400);
+  }
+
+  function formatCouncilResult(s) {
+    const d = s.directive || {};
+    const ex = s.execution || {};
+    const lines = [
+      `# ⚖ Council Verdict`,
+      `**Goal:** ${s.goal || ""}`,
+      `**Decision:** ${(d.decision || s.status || "").toUpperCase()}`,
+      `**Tally:** ${JSON.stringify(s.tally || {})}`,
+      "",
+      "## Consensus",
+      d.summary || s.consensus || "—",
+      "",
+      "## Action plan",
+      ...(d.actions || []).map((a, i) => `${i + 1}. ${a}`),
+    ];
+    if ((d.risks || []).length) {
+      lines.push("", "## Risks", ...d.risks.map((r) => `- ⚠ ${r}`));
+    }
+    if ((s.dissent || []).length) {
+      lines.push("", "## Dissent", ...s.dissent.map((x) => `- ${x}`));
+    }
+    lines.push(
+      "",
+      "## Execution",
+      `Status: ${ex.status || "n/a"} · mission=${ex.mission_id || "—"}`,
+      "",
+      ex.result || ex.error || ""
+    );
+    return lines.join("\n");
   }
 
   function followSse(mid) {
@@ -446,7 +624,15 @@
   async function cancelMission() {
     if (!state.activeMissionId) return;
     try {
-      await api(`/api/missions/${state.activeMissionId}/cancel`, { method: "POST" });
+      if (state.mode === "council") {
+        await api(`/api/council/${state.activeMissionId}/cancel`, {
+          method: "POST",
+        });
+      } else {
+        await api(`/api/missions/${state.activeMissionId}/cancel`, {
+          method: "POST",
+        });
+      }
       if (state.ws && state.ws.readyState === 1) {
         state.ws.send(
           JSON.stringify({ type: "cancel", mission_id: state.activeMissionId })

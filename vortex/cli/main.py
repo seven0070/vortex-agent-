@@ -58,13 +58,34 @@ def main():
             print(
                 "  @<bot> <msg>         talk to one specialist\n"
                 "  /auto <goal>         autonomous mission (live trace)\n"
+                "  /council <goal>      Agent Council: deliberate → vote → execute\n"
+                "  /seats               list council personas\n"
                 "  /missions            list sessions/missions\n"
                 "  /mission <id>        show mission detail\n"
                 "  /bots /spawn /kill\n"
                 "  /tools /skills\n"
                 "  /history /stats\n"
-                "  anything else        chief chat (auto-missions when needed)"
+                "  anything else        chief chat (auto-council when multi-domain)"
             )
+            continue
+        if msg in ("/seats", "/council"):
+            for s in os_.council.list_seats():
+                print(f"  {s['icon']} {s['name']:8} {s['title']}  (w={s['weight']}) — {s['mandate'][:50]}")
+            continue
+        if msg.startswith("/council "):
+            goal = msg.split(" ", 1)[1].strip()
+            print("  ⚖ convening council…")
+            result = os_.council.convene(goal, auto_execute=True, background=True)
+            cid = result["id"]
+            while True:
+                time.sleep(0.25)
+                m = os_.council.get(cid)
+                if m and m["status"] in ("completed", "failed", "cancelled"):
+                    d = m.get("directive") or {}
+                    ex = m.get("execution") or {}
+                    print(f"\n  decision={(d.get('decision') or '?').upper()} tally={m.get('tally')}")
+                    print(f"\nvortex> {ex.get('result') or d.get('summary') or m.get('consensus')}\n")
+                    break
             continue
         if msg == "/bots":
             for b in os_.list_bots():

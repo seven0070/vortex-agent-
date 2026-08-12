@@ -13,6 +13,7 @@ TOOLSETS: Dict[str, List[str]] = {
     "crypto": ["steganography", "glossopetrae"],
     "meta": ["now", "todo", "skills_list", "skill_view"],
     "delegate": ["delegate_task"],
+    "council": ["convene_council", "council_status"],
     # Composed presets
     "core": [
         "@web",
@@ -29,6 +30,7 @@ TOOLSETS: Dict[str, List[str]] = {
         "@core",
         "@crypto",
         "@delegate",
+        "@council",
     ],
     # Swarm role presets
     "role_orchestrator": ["@full"],

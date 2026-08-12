@@ -35,6 +35,14 @@ class MissionRequest(BaseModel):
     wait: bool = False
 
 
+class CouncilRequest(BaseModel):
+    goal: str
+    seats: Optional[list] = None
+    auto_execute: bool = True
+    wait: bool = False
+    max_rounds: int = Field(default=3, ge=1, le=5)
+
+
 os_runtime: Optional[VortexOS] = None
 _ws_clients: Set[WebSocket] = set()
 _event_queue: Optional[asyncio.Queue] = None
@@ -99,6 +107,8 @@ async def health():
         "provider": os_runtime.brain.provider,
         "tools": len(os_runtime.list_tools()),
         "missions": os_runtime.db.stats().get("sessions", 0),
+        "council_seats": len(os_runtime.council.seats),
+        "architecture": "hermes-inspired + agent-council",
     }
 
 
@@ -110,11 +120,61 @@ async def meta():
         "provider": os_runtime.brain.provider,
         "model": os_runtime.brain.model or "offline-planner",
         "workspace": str(WORKSPACE),
-        "architecture": "hermes-inspired",
+        "architecture": "hermes-inspired + agent-council",
         "tools": os_runtime.list_tools(),
         "bots": os_runtime.list_bots(),
         "skills": os_runtime.skills.list(),
+        "council_seats": os_runtime.council.list_seats(),
     }
+
+
+# ── Agent Council ──────────────────────────────────────────────────────────
+@app.get("/api/council/seats")
+async def council_seats():
+    return os_runtime.council.list_seats()
+
+
+@app.get("/api/council")
+async def council_list():
+    return os_runtime.council.list_sessions()
+
+
+@app.post("/api/council")
+async def council_convene(req: CouncilRequest):
+    if not req.goal.strip():
+        raise HTTPException(400, "goal required")
+    if req.wait:
+        result = await asyncio.to_thread(
+            os_runtime.council.convene,
+            req.goal,
+            req.seats,
+            req.auto_execute,
+            False,
+            req.max_rounds,
+        )
+    else:
+        result = os_runtime.council.convene(
+            req.goal,
+            seat_ids=req.seats,
+            auto_execute=req.auto_execute,
+            background=True,
+            max_rounds=req.max_rounds,
+        )
+    return result
+
+
+@app.get("/api/council/{cid}")
+async def council_get(cid: str):
+    s = os_runtime.council.get(cid)
+    if not s:
+        raise HTTPException(404, "council session not found")
+    return s
+
+
+@app.post("/api/council/{cid}/cancel")
+async def council_cancel(cid: str):
+    ok = os_runtime.council.cancel(cid)
+    return {"status": "cancelling" if ok else "not_running"}
 
 
 @app.get("/api/bots")

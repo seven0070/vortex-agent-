@@ -330,6 +330,43 @@ class OfflinePlanner:
             plan.append(("memory_recall", {"query": original}, "Recall memory."))
             return plan
 
+        # Council — multi-domain / deliberate goals
+        if any(
+            k in goal
+            for k in (
+                "council",
+                "deliberate",
+                "debate",
+                "pros and cons",
+                "weigh",
+                "committee",
+                "vote on",
+                "should we",
+            )
+        ) or (
+            sum(
+                1
+                for k in (
+                    "research",
+                    "build",
+                    "secure",
+                    "strategy",
+                    "design",
+                    "risk",
+                )
+                if k in goal
+            )
+            >= 2
+        ):
+            plan.append(
+                (
+                    "convene_council",
+                    {"goal": original, "auto_execute": True},
+                    "Convene the Agent Council to deliberate and execute.",
+                )
+            )
+            return plan
+
         if any(k in goal for k in ("build", "create", "make", "automate", "delegate")):
             topic = self._topic(original)
             plan.append(("web_search", {"query": topic, "max_results": 3}, f"Research {topic}"))
@@ -425,6 +462,9 @@ class OfflinePlanner:
         if not ok and "error" in joined:
             return len(observations) >= 3
         g = goal.lower()
+        # council tool is one-shot (deliberation + exec inside)
+        if any(k in g for k in ("council", "deliberate", "debate", "committee")) or "convene_council" in joined:
+            return ok and len(observations) >= 1
         if any(k in g for k in ("research", "report", "analyze", "analyse", "investigate", "build", "create")):
             return any("wrote " in o.lower() for o in observations) or len(observations) >= 3
         return ok and len(observations) >= 1
@@ -459,6 +499,17 @@ class OfflinePlanner:
         wp = re.search(r"Wrote\s+(\S+)", " ".join(observations))
         if wp:
             lines.append(f"Artifact written to `{wp.group(1)}`.")
+            return "\n".join(lines)
+        # council payload
+        if "council" in last.lower() or "decision" in last.lower():
+            cm = re.search(r'"result":\s*"((?:\\.|[^"\\])*)"', last)
+            if cm:
+                try:
+                    lines.append(bytes(cm.group(1), "utf-8").decode("unicode_escape")[:2000])
+                    return "\n".join(lines)
+                except Exception:
+                    pass
+            lines.append(last[:2000])
             return "\n".join(lines)
         lines.append(last[:1500] or "Task completed.")
         return "\n".join(lines)

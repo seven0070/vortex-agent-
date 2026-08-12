@@ -43,6 +43,7 @@ class AIAgent:
         role: str = "agent",
         blocked_tools: Optional[Set[str]] = None,
         brain: Optional[LLMBrain] = None,
+        council=None,
     ):
         from vortex.agent.state import SessionDB
         from vortex.agent.vector_memory import VectorMemory
@@ -60,6 +61,7 @@ class AIAgent:
         self.role = role
         self.blocked_tools = set(blocked_tools or [])
         self.brain = brain or LLMBrain()
+        self.council = council
         self.session_id: Optional[str] = None
         self._cancel = False
         self._research_blob = ""
@@ -184,11 +186,23 @@ class AIAgent:
             )
         if low in ("help", "/help", "who are you"):
             return (
-                "I'm Vortex — Hermes-inspired autonomous agent.\n"
+                "I'm Vortex — Hermes-inspired autonomous agent with an AI Council.\n"
                 "  • Describe a goal and I'll plan → act → observe\n"
-                "  • `/auto <goal>` force a mission\n"
+                "  • `/auto <goal>` force a solo mission\n"
+                "  • `/council <goal>` deliberate then execute\n"
                 "  • Tools: " + ", ".join(self.enabled_tools()[:12]) + "…"
             )
+        if low.startswith("/council ") or low.startswith("/deliberate "):
+            goal = message.split(" ", 1)[1].strip()
+            if not self.council:
+                return "Council is not wired into this agent."
+            result = self.council.convene(goal, auto_execute=True, background=False)
+            d = result.get("directive") or {}
+            ex = result.get("execution") or {}
+            return (
+                f"⚖ Council [{result.get('id')}] · {d.get('decision', '?').upper()}\n"
+                f"{ex.get('result') or d.get('summary') or ''}"
+            )[:4000]
         if low.startswith("/auto "):
             goal = message.split(" ", 1)[1].strip()
             result = self.run(goal, background=False)
@@ -298,7 +312,7 @@ class AIAgent:
                 # rewrite chained research args
                 args = self._rewrite(name, args, goal)
 
-                if name not in self.enabled_tools() and name not in registry.names():
+                if name not in self.enabled_tools():
                     obs = f"ERROR: Unknown or disabled tool '{name}'"
                     self._record_step(sid, live, i + 1, thought, name, args, obs, "error")
                     messages.append(
@@ -318,6 +332,7 @@ class AIAgent:
                     "vector": self.vector,
                     "skills": self.skills,
                     "memory_provider": self.memory_provider,
+                    "council": self.council,
                     "_todos": self._todos,
                     "session_id": sid,
                 }

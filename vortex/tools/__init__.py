@@ -11,6 +11,7 @@ from . import (  # noqa: F401
     crypto_tools,
     meta_tools,
     delegate_tool,
+    council_tools,
 )
 
 __all__ = ["registry"]

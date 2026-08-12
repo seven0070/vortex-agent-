@@ -21,7 +21,7 @@
       </div>
       <div>
         <h1>VORTEX</h1>
-        <p class="tag">Hermes-inspired · Autonomous Multi-Agent OS</p>
+        <p class="tag">Council · Autonomous · Hermes-inspired</p>
       </div>
     </div>
     <div class="status-pills">
@@ -35,6 +35,14 @@
   <main class="layout">
     <!-- LEFT: swarm + tools -->
     <aside class="panel side">
+      <section>
+        <div class="section-head">
+          <h2>Council</h2>
+          <span class="muted" id="seat-count">0</span>
+        </div>
+        <ul class="bot-list" id="seat-list"></ul>
+      </section>
+
       <section>
         <div class="section-head">
           <h2>Swarm</h2>
@@ -72,19 +80,22 @@
         <textarea
           id="goal-input"
           rows="3"
-          placeholder="Give Vortex a goal — e.g. Research quantum computing breakthroughs and write a report, Calculate fib(40), Hide 'launch codes' in a weather report…"
+          placeholder="Give Vortex a goal — or convene the Council for multi-stakeholder deliberation before execution…"
         ></textarea>
         <div class="composer-actions">
           <div class="chips" id="goal-chips">
+            <button data-goal="Council: research, design, and securely deliver an autonomous agent roadmap with risks">⚖ Full council</button>
             <button data-goal="Research the latest advances in autonomous AI agents and write a structured report">Research + report</button>
             <button data-goal="Calculate fibonacci(35) and benchmark it">Benchmark fib(35)</button>
             <button data-goal="Hide the payload 'vortex-live' inside a friendly weather message">Stego hide</button>
-            <button data-goal="List workspace files and summarize what is there">Inspect workspace</button>
             <button data-goal="Get system info: uname, whoami, disk">System intel</button>
           </div>
           <div class="action-row">
-            <button class="primary" id="btn-launch">
-              <span class="btn-icon">⚡</span> Launch Mission
+            <button class="primary" id="btn-council">
+              <span class="btn-icon">⚖</span> Convene Council
+            </button>
+            <button class="secondary" id="btn-launch">
+              <span class="btn-icon">⚡</span> Solo Mission
             </button>
             <button class="secondary" id="btn-chat">Quick Chat</button>
             <button class="danger ghost" id="btn-cancel" disabled>Cancel</button>
