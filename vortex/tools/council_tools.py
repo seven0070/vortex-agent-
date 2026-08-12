@@ -91,7 +91,8 @@ registry.register(
             "seats": {
                 "type": "string",
                 "description": "Optional comma-separated seat ids "
-                "(prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook)",
+                "(prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook,"
+                "lifeos,opik,dspy,kitesurf)",
             },
             "auto_execute": {
                 "type": "boolean",

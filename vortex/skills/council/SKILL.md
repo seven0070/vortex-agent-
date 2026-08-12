@@ -1,7 +1,7 @@
 ---
 name: council
-description: Convene the multi-project AI Agent Council (Prime, Zero, Buzz, Hermes, QM, Eve, Odysseus, OpenWorker, Grok, Notebook)
-tags: council, multi-agent, hermes, agent-zero, eve, openworker
+description: Convene the multi-project AI Agent Council (14 seats including LifeOS, Opik, DSPy, Kitesurf)
+tags: council, multi-agent, hermes, agent-zero, eve, openworker, lifeos, opik, dspy
 source: bundled
 ---
 
@@ -22,14 +22,18 @@ The council seats are **inspired by real open-source agent projects**. They deli
 | 🗺 Odysseus | [odysseus-dev/odysseus](https://github.com/odysseus-dev/odysseus) |
 | 👷 OpenWorker | [andrewyng/openworker](https://github.com/andrewyng/openworker) |
 | ⚡ Grok | [xai-org/grok-build](https://github.com/xai-org/grok-build) |
-| 📓 Notebook | research synthesizer seat |
+| 📓 Notebook | research synthesizer |
+| ⛰ LifeOS | [danielmiessler/LifeOS](https://github.com/danielmiessler/LifeOS) |
+| 🔭 Opik | [comet-ml/opik](https://github.com/comet-ml/opik) |
+| 🧬 DSPy | [stanfordnlp/dspy](https://github.com/stanfordnlp/dspy) |
+| ☁ Kitesurf | [kitesurf.cloudflare.app](https://kitesurf.cloudflare.app) |
 
 ## When to convene
 
 - Multi-domain goals (research + build + secure)
 - User says council / deliberate / debate / pros and cons
-- Architecture or quality-gate decisions
-- High-stakes plans that need adversarial review
+- Architecture, eval, or life/work hill-climb decisions
+- High-stakes plans that need adversarial + observability review
 
 ## How
 
@@ -38,13 +42,13 @@ convene_council(goal="...", auto_execute=true)
 ```
 
 Optional seats filter (comma-separated ids):
-`prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook`
+`prime,zero,buzz,hermes,qm,eve,odysseus,openworker,grok,notebook,lifeos,opik,dspy,kitesurf`
 
 ## Pipeline
 
 1. **Brief** — each project seat frames the goal  
-2. **Propose** — Hermes / Zero / Grok / OpenWorker / Notebook / Eve / Prime  
-3. **Critique** — Prime gate + Buzz collab + Hermes core + Eve files + Notebook evidence  
+2. **Propose** — builders + synthesizers (incl. LifeOS, DSPy, Opik, Kitesurf)  
+3. **Critique** — Prime gate + Opik eval + DSPy modularity + Buzz collab + evidence  
 4. **Vote** — weighted; Prime/Hermes hard-veto on harm  
 5. **Execute** — Vortex chief runs the consensus with tools  
 

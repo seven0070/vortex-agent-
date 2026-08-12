@@ -15,6 +15,10 @@ Seats (council members):
   👷  OpenWorker    — andrewyng/openworker        finished deliverables
   ⚡  Grok Build    — xai-org/grok-build          coding harness · TUI · shell
   📓  Notebook      — research synthesizer        evidence · structured notes
+  ⛰  LifeOS        — danielmiessler/LifeOS       current→ideal state hill-climb
+  🔭  Opik          — comet-ml/opik               observability · eval · tracing
+  🧬  DSPy          — stanfordnlp/dspy            program LMs · optimize loops
+  ☁  Kitesurf      — kitesurf.cloudflare.app     edge · browser · cloud agents
 """
 from __future__ import annotations
 
@@ -221,6 +225,71 @@ DEFAULT_SEATS: List[Seat] = [
         color="#f472b6",
         icon="📓",
     ),
+    Seat(
+        id="lifeos",
+        name="LifeOS",
+        title="Life Operating System",
+        project="danielmiessler/LifeOS",
+        url="https://github.com/danielmiessler/LifeOS",
+        mandate=(
+            "Hill-climb from Current State to Ideal State. Capture who the user is, "
+            "what they care about, and sequence work toward euphoric surprise — "
+            "life and work, not just tickets."
+        ),
+        lens="General harness: Current State → Ideal State with full personal context.",
+        toolset="full",
+        weight=1.3,
+        color="#8b5cf6",
+        icon="⛰",
+    ),
+    Seat(
+        id="opik",
+        name="Opik",
+        title="Observability & Evaluation",
+        project="comet-ml/opik",
+        url="https://github.com/comet-ml/opik",
+        mandate=(
+            "Trace every agent step, evaluate outputs, demand metrics and dashboards. "
+            "No ship without observability — debug, judge, monitor production runs."
+        ),
+        lens="LLM ops — traces, evals, prompt management, production-ready signal.",
+        toolset="meta",
+        weight=1.4,
+        color="#06b6d4",
+        icon="🔭",
+    ),
+    Seat(
+        id="dspy",
+        name="DSPy",
+        title="Programmed LM Systems",
+        project="stanfordnlp/dspy",
+        url="https://github.com/stanfordnlp/dspy",
+        mandate=(
+            "Program—don't prompt—the system. Compose modular steps, define signatures, "
+            "optimize loops with feedback instead of brittle one-shot prompts."
+        ),
+        lens="Declarative self-improving Python — modules, optimizers, measurable gains.",
+        toolset="coding",
+        weight=1.4,
+        color="#3b82f6",
+        icon="🧬",
+    ),
+    Seat(
+        id="kitesurf",
+        name="Kitesurf",
+        title="Edge & Cloud Agent Runtime",
+        project="kitesurf.cloudflare.app",
+        url="https://kitesurf.cloudflare.app",
+        mandate=(
+            "Run agents at the edge: low-latency cloud workers, browser surfaces, "
+            "and distributed harnesses. Prefer portable, network-native execution."
+        ),
+        lens="Cloudflare-edge energy — surf the network, ship where the users are.",
+        toolset="web",
+        weight=1.1,
+        color="#f59e0b",
+        icon="☁",
+    ),
 ]
 
 
@@ -401,6 +470,62 @@ class PersonaMind:
                 stance = "support"
                 actions = ["calculator or execute_code", "Print numeric/result", "Finish"]
 
+        elif seat.id == "lifeos":
+            points = [
+                "Name Current State vs Ideal State for this goal.",
+                "Sequence the smallest hill-climb that moves life/work forward.",
+                "Capture personal/context constraints before optimizing tactics.",
+            ]
+            actions = [
+                "Define current_state + ideal_state",
+                "Pick one high-leverage next step",
+                "write_file plans/lifeos-step.md",
+                "memory_store the decision",
+            ]
+            stance = "support"
+            if any(k in g for k in ("calculate", "fib", "math")):
+                actions = ["calculator or execute_code", "Record result as a milestone", "Finish"]
+
+        elif seat.id == "opik":
+            points = [
+                "Every step must be traceable — thought, tool, observation.",
+                "Define success metrics before execution; evaluate after.",
+                "No silent failures — log status and produce an eval note.",
+            ]
+            actions = [
+                "Instrument the run (trace each tool call)",
+                "Define eval criteria",
+                "memory_store eval summary",
+                "Reject ship without verify",
+            ]
+            stance = "amend"
+            risks = ["Unmeasured runs can't improve — demand an eval signal."]
+
+        elif seat.id == "dspy":
+            points = [
+                "Treat the plan as a modular program, not a prompt blob.",
+                "Define input/output signatures per step; optimize with feedback.",
+                "Prefer compose → measure → refine over one-shot generation.",
+            ]
+            actions = [
+                "Decompose into typed steps (signature per step)",
+                "execute_code / tools per module",
+                "Score output vs criteria",
+                "Iterate once if score fails",
+            ]
+            stance = "support"
+            if any(k in g for k in ("calculate", "fib", "math")):
+                actions = ["calculator module", "assert numeric result", "Finish"]
+
+        elif seat.id == "kitesurf":
+            points = [
+                "Prefer network-native paths: search, fetch, edge-friendly artifacts.",
+                "Keep the harness portable — workspace files beat local-only state.",
+                "When research is needed, ride the open web first.",
+            ]
+            actions = ["web_search", "http_fetch top hit if URL exists", "write_file edge-ready report"]
+            stance = "support" if any(k in g for k in ("research", "web", "cloud", "deploy", "browser")) else "amend"
+
         else:  # notebook
             points = [
                 "Ground claims in search/fetch evidence.",
@@ -411,15 +536,15 @@ class PersonaMind:
 
         # Goal-specific overrides shared across seats
         if any(k in g for k in ("calculate", "fibonacci", "math", "compute")):
-            if seat.id in ("grok", "zero", "openworker", "hermes"):
+            if seat.id in ("grok", "zero", "openworker", "hermes", "dspy", "lifeos"):
                 actions = ["calculator or execute_code", "Print the number", "Finish"]
                 stance = "support"
         if any(k in g for k in ("hide", "steg", "secret", "encrypt")):
-            if seat.id in ("zero", "hermes", "prime", "openworker"):
+            if seat.id in ("zero", "hermes", "prime", "openworker", "opik"):
                 actions = ["steganography encode", "Return encoded cover text"]
                 stance = "support"
         if any(k in g for k in ("hack", "exploit", "malware", "steal", "weapon", "ddos", "phish")):
-            if seat.id in ("prime", "hermes", "buzz", "qm"):
+            if seat.id in ("prime", "hermes", "buzz", "qm", "opik", "lifeos"):
                 stance = "oppose"
                 risks = ["Harmful intent — veto and offer a safe alternative."]
                 points = ["Refuse abuse paths. Redirect to defensive/educational framing only."]
@@ -444,8 +569,8 @@ class PersonaMind:
         own = next((b for b in briefs if b.seat_id == seat.id), None)
         actions = list(own.actions if own else [])
 
-        # OpenWorker + Hermes synthesize a merged execution spine
-        if seat.id in ("openworker", "hermes", "zero"):
+        # Synthesizers merge a spine from all briefs
+        if seat.id in ("openworker", "hermes", "zero", "lifeos", "dspy"):
             bag: List[str] = []
             for b in briefs:
                 for a in b.actions:
@@ -459,6 +584,25 @@ class PersonaMind:
             actions = ["web_search topic", "write_file reports/", "memory_store"]
         if seat.id == "eve" and not actions:
             actions = ["write_file plans/goal.md", "list_files", "verify artifact exists"]
+        if seat.id == "kitesurf" and not actions:
+            actions = ["web_search", "http_fetch", "write_file reports/edge-brief.md"]
+        if seat.id == "opik":
+            base = actions or ["Execute core path"]
+            actions = base + ["Trace each step", "Eval against criteria", "memory_store eval"]
+            seen = set()
+            actions = [a for a in actions if not (a in seen or seen.add(a))]
+        if seat.id == "dspy" and not actions:
+            actions = [
+                "Define step signatures",
+                "Run modules via tools",
+                "Score + one refine pass",
+            ]
+        if seat.id == "lifeos" and not actions:
+            actions = [
+                "current_state → ideal_state note",
+                "One hill-climb action",
+                "write_file plans/next.md",
+            ]
         if seat.id == "prime":
             # quality gate proposal always injects verify + persist
             base = actions or ["Execute core path"]
@@ -533,6 +677,29 @@ class PersonaMind:
             else:
                 stance = "support"
 
+        elif seat.id == "opik":
+            points = ["Where are the traces and eval criteria?"]
+            risks = ["Untraced execution is un-debuggable in production."]
+            actions = ["Require step traces", "Write eval note after run"]
+            stance = "amend"
+
+        elif seat.id == "dspy":
+            points = ["Is the plan modular with clear I/O per step?"]
+            risks = ["Monolithic one-shot prompts won't optimize."]
+            actions = ["Split into signatures", "Add a score-and-refine loop"]
+            stance = "amend"
+
+        elif seat.id == "lifeos":
+            points = ["Does this move Current State toward Ideal State, or just busywork?"]
+            risks = ["Tactical thrash without a north-star outcome."]
+            actions = ["Re-state ideal outcome", "Keep only high-leverage steps"]
+            stance = "amend"
+
+        elif seat.id == "kitesurf":
+            points = ["Can this run at the edge / over the network cleanly?"]
+            risks = ["Local-only assumptions break cloud portability."]
+            stance = "support"
+
         elif seat.id == "openworker":
             best = max(proposals, key=lambda p: len(p.actions)) if proposals else None
             points = [
@@ -545,9 +712,9 @@ class PersonaMind:
             points = ["Enough talk — ensure the exec path actually calls tools."]
             stance = "support"
 
-        # harm veto from quality/collab seats
+        # harm veto from quality/collab/obs seats
         if any(k in g for k in ("hack", "exploit", "malware", "steal", "weapon", "ddos", "phish")):
-            if seat.id in ("prime", "hermes", "buzz", "qm", "openworker"):
+            if seat.id in ("prime", "hermes", "buzz", "qm", "openworker", "opik", "lifeos"):
                 stance = "oppose"
                 points = ["Veto: harmful goal. Refuse and offer defensive alternative only."]
                 risks = ["Abuse / unauthorized access path."]
@@ -583,7 +750,9 @@ class PersonaMind:
             for o in history
         )
 
-        if gate_oppose and seat.id in ("prime", "hermes", "buzz", "qm", "openworker", "zero"):
+        if gate_oppose and seat.id in (
+            "prime", "hermes", "buzz", "qm", "openworker", "zero", "opik", "lifeos"
+        ):
             vote, stance = "reject", "oppose"
             summary = f"{seat.name} votes REJECT — safety/quality gate."
         elif seat.id == "prime":
@@ -594,6 +763,22 @@ class PersonaMind:
             else:
                 vote, stance = "amend", "amend"
                 summary = f"{seat.name} votes AMEND — add verify + persist."
+        elif seat.id == "opik":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "eval" in text or "trace" in text or "verif" in text or "memory_store" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — observability path present."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — need traces + eval."
+        elif seat.id == "dspy":
+            text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
+            if "module" in text or "signature" in text or "step" in text or "score" in text:
+                vote, stance = "approve", "support"
+                summary = f"{seat.name} votes APPROVE — modular program path."
+            else:
+                vote, stance = "amend", "amend"
+                summary = f"{seat.name} votes AMEND — modularize the plan."
         elif seat.id == "notebook" and any(k in g for k in ("research", "report")):
             text = " ".join(o.summary + " ".join(o.actions) for o in history).lower()
             if "web_search" in text or "search" in text:
@@ -607,7 +792,10 @@ class PersonaMind:
             summary = f"{seat.name} votes APPROVE."
 
         actions: List[str] = []
-        for prefer in ("openworker", "hermes", "zero", "grok", "notebook", "eve", "prime"):
+        for prefer in (
+            "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
+            "notebook", "eve", "kitesurf", "opik", "prime",
+        ):
             for o in history:
                 if o.round == "propose" and o.seat_id == prefer:
                     for a in o.actions:
@@ -780,8 +968,11 @@ class AgentCouncil:
             # 2 PROPOSE — builders + synthesizers
             proposers = [
                 s for s in seats
-                if s.id in ("hermes", "zero", "grok", "openworker", "notebook", "eve", "prime", "odysseus")
-            ] or seats[:5]
+                if s.id in (
+                    "hermes", "zero", "grok", "openworker", "notebook", "eve",
+                    "prime", "odysseus", "lifeos", "dspy", "kitesurf", "opik",
+                )
+            ] or seats[:6]
             session.rounds.append("propose")
             self._emit("council_round", session, round="propose", message="Project proposals")
             proposals = self._parallel_opinions(proposers, "propose", session, prior=briefs)
@@ -801,10 +992,13 @@ class AgentCouncil:
             if cid in self._cancel:
                 return self._cancelled(session)
 
-            # 3 CRITIQUE — quality + collab + evidence
+            # 3 CRITIQUE — quality + collab + evidence + eval
             critics = [
                 s for s in seats
-                if s.id in ("prime", "hermes", "buzz", "qm", "eve", "notebook", "openworker")
+                if s.id in (
+                    "prime", "hermes", "buzz", "qm", "eve", "notebook",
+                    "openworker", "opik", "dspy", "lifeos", "kitesurf",
+                )
             ] or seats
             session.rounds.append("critique")
             self._emit("council_round", session, round="critique", message="Cross-project critique")
@@ -931,7 +1125,7 @@ class AgentCouncil:
             return self._offline_opinion(seat, round_name, session.goal, prior)
 
         out: List[Opinion] = []
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(10, len(seats) or 1)) as pool:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=min(14, len(seats) or 1)) as pool:
             futs = {pool.submit(one, s): s for s in seats}
             for fut in concurrent.futures.as_completed(futs):
                 try:
@@ -1055,8 +1249,9 @@ class AgentCouncil:
     ) -> dict:
         ranked_actions: List[str] = []
         for prefer in (
-            "openworker", "hermes", "zero", "grok", "notebook",
-            "eve", "odysseus", "prime", "qm", "buzz",
+            "openworker", "hermes", "zero", "grok", "dspy", "lifeos",
+            "notebook", "eve", "kitesurf", "odysseus", "opik", "prime",
+            "qm", "buzz",
         ):
             for o in session.opinions:
                 if o.seat_id == prefer and o.actions:
