@@ -1,9 +1,9 @@
 """
 Vortex Evolution Engine v1 — real, not simulated.
 
-Weakness → Hypothesis → Actual overlay patch → Isolated checkout →
-Real tests → Real benchmark → Security scan → Baseline comparison →
-Real canary → Governance → Promote → Monitor → Automatic rollback
+Weakness → Hypothesis → Isolated git worktree → Actual code patch →
+Real tests → Real benchmark → Compare LKG → Council + Resolution →
+Security → Governance → Canary → Monitor → Promote or rollback
 """
 from __future__ import annotations
 
@@ -120,7 +120,7 @@ class HypothesisGenerator:
         if wtype == "eval_failure" or target in ("reasoning-chain", "power-operator"):
             hyps.append({
                 "hypothesis": f"Fix {target} by enabling chained arithmetic and power in the overlay compiler",
-                "change_set": [{"file": "overlay.json", "type": "compiler_improve", "target": target}],
+                "change_set": [{"file": "evolution/compiler.py", "type": "compiler_improve", "target": target}],
                 "confidence": 0.9,
             })
         if wtype == "lesson_loss":
@@ -280,6 +280,7 @@ class EvolutionEngine:
             candidate["decision"] = "reject"
             candidate["reason"] = "sandbox failed"
             candidate["status"] = "sandbox_failed"
+            self._cleanup_workspace(candidate)
             self._save_candidate(candidate)
             self._restore_operational()
             return candidate
@@ -296,6 +297,20 @@ class EvolutionEngine:
         if not sec_res.get("passed"):
             candidate["decision"] = "reject"
             candidate["reason"] = f"security failed risk={sec_res.get('risk_score')}"
+            self._cleanup_workspace(candidate)
+            self._save_candidate(candidate)
+            self._restore_operational()
+            return candidate
+
+        # Council generates views; Resolution selects; Governance authorizes later.
+        review = self._council_and_resolve(candidate, baseline, new_bench)
+        candidate["council"] = review.get("council")
+        candidate["resolution"] = review.get("resolution")
+        if not review.get("proceed"):
+            candidate["decision"] = "rejected"
+            candidate["reason"] = review.get("reason") or "council/resolution rejected candidate"
+            candidate["status"] = "rejected"
+            self._cleanup_workspace(candidate)
             self._save_candidate(candidate)
             self._restore_operational()
             return candidate
@@ -310,6 +325,7 @@ class EvolutionEngine:
             candidate["status"] = "rolled_back"
             candidate["reason"] = rb["reason"]
             candidate["rollback"] = rb
+            self._cleanup_workspace(candidate)
             self._save_candidate(candidate)
             self._restore_operational()
             return candidate
@@ -356,6 +372,73 @@ class EvolutionEngine:
             except Exception:
                 pass
         return candidate
+
+    def _council_and_resolve(self, candidate: Dict[str, Any], baseline: Dict, bench: Dict) -> Dict[str, Any]:
+        """Council = competing views. Resolution = which view wins. Does not execute."""
+        bq = float(baseline.get("quality", baseline.get("score", 0)) or 0)
+        cq = float(bench.get("quality", bench.get("score", 0)) or 0)
+        quality_up = cq > bq + 1e-9
+        goal = (
+            f"Promote evolution candidate v{int(candidate.get('generation_id') or 0):03d}? "
+            f"hypothesis={((candidate.get('hypothesis') or {}).get('hypothesis') or '')[:120]}"
+        )
+        views = [
+            {
+                "id": "promote",
+                "result": f"promote: quality {bq:.3f} → {cq:.3f}; patches={candidate.get('applied_patches')}",
+                "confidence": 0.88 if quality_up else 0.35,
+                "evidence": list(candidate.get("applied_patches") or [])[:6],
+                "latency_ms": int((candidate.get("sandbox_result") or {}).get("latency_ms") or 0),
+            },
+            {
+                "id": "reject",
+                "result": "reject: keep last-known-good generation",
+                "confidence": 0.28 if quality_up else 0.7,
+                "evidence": list((bench.get("regressions") or []))[:6],
+                "latency_ms": 0,
+            },
+        ]
+        council_out = None
+        agent = self.agent
+        if agent and getattr(agent, "council", None):
+            try:
+                council_out = agent.council.deliberate(goal=goal, candidates=views)
+                council_out = {
+                    "executes": False,
+                    "decision": council_out.get("decision"),
+                    "confidence": council_out.get("confidence"),
+                    "final": (council_out.get("final") or "")[:400],
+                }
+            except Exception as e:
+                council_out = {"error": str(e)[:200], "executes": False}
+        resolution = None
+        if agent and getattr(agent, "resolver", None):
+            try:
+                resolution = agent.resolver.resolve(views, goal=goal)
+            except Exception as e:
+                resolution = {"action": "select", "error": str(e)[:200], "selected": {"id": "promote" if quality_up else "reject"}}
+        selected_id = None
+        if resolution:
+            selected_id = (resolution.get("selected") or {}).get("id") or resolution.get("action")
+        if selected_id == "reject" or (resolution or {}).get("action") in ("replan", "denied"):
+            return {
+                "proceed": False,
+                "reason": f"resolution selected {selected_id or resolution.get('action')}",
+                "council": council_out,
+                "resolution": resolution,
+            }
+        return {"proceed": True, "council": council_out, "resolution": resolution}
+
+    def _cleanup_workspace(self, candidate: Dict[str, Any]) -> None:
+        wt = candidate.get("worktree_dir")
+        if not wt:
+            return
+        try:
+            self.candidate_gen.workspace.remove(
+                wt, candidate.get("repo_root"), branch=candidate.get("git_branch")
+            )
+        except Exception:
+            pass
 
     def _promote(self, candidate: Dict[str, Any], bench: Dict[str, Any], hypothesis: Dict) -> Dict[str, Any]:
         overlay = Overlay(candidate.get("overlay") or {}, source="promoted")
@@ -430,6 +513,10 @@ class EvolutionEngine:
                 "decision": candidate.get("decision"),
                 "reason": candidate.get("reason"),
                 "hypothesis": candidate.get("hypothesis"),
+                "workspace_mode": candidate.get("workspace_mode"),
+                "git_branch": candidate.get("git_branch"),
+                "council": candidate.get("council"),
+                "resolution": candidate.get("resolution"),
             }
             (release_dir / "evolution_record.json").write_text(json.dumps(detail, default=str, indent=2))
             golden = release_dir / "golden"

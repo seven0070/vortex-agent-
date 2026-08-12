@@ -157,16 +157,17 @@ Backward compat: `from tools import TOOL_CLASSES` still works (loads package).
 `backend/evolution/` is the authoritative engine. `self_improve.py` keeps the per-turn RSI loop and delegates generation changes here.
 
 ```
-Weakness → Hypothesis → Actual overlay patch → Isolated checkout
-  → Real subprocess tests → Real benchmark → Security scan
-  → Multi-dimensional policy → Real canary → Governance
-  → Promote overlay → Monitor → Automatic rollback
+Weakness → Hypothesis → Isolated git worktree → Actual code patch
+  → Real tests → Vortex benchmark vs last-known-good
+  → Council (views only) → Resolution (selects) → Security → Governance
+  → Canary → Monitor → promote or automatic rollback
 ```
 
 What is real now:
 
-1. **Candidate patching** — writes `overlay.json`, copies `compiler.py` + `harness.py`, records `patches/applied.diff`. Does not touch `backend/*.py`.
-2. **Isolated sandbox** — `python -I harness.py` in the checkout. Mock string `"sandbox tests passed (mock)"` is treated as failure.
+1. **Candidate workspace** — `git worktree add` onto `evolution/vNNN-…` under the release dir (fallback: isolated copy).
+2. **Actual patch** — edits `DEFAULT_OVERLAY` in the worktree `compiler.py` and writes `patches/source.diff`. Production `backend/*.py` is never touched.
+3. **Isolated sandbox** — `python -I harness.py` plus worktree `unittest tests.test_rsi.CompilerTests`. Mock string `"sandbox tests passed (mock)"` is treated as failure.
 3. **Regression benchmark** — golden tasks in `tests/fixtures/golden_tasks.json`. Capability tests (chained arithmetic, power) are earned, not assumed.
 4. **Canary** — activates the candidate overlay, runs canary tasks vs last-known-good, restores on failure.
 5. **Rollback** — `LAST_KNOWN_GOOD` pointer is never deleted. Later `v00N` directories stay on disk.

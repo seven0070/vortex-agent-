@@ -12,6 +12,11 @@ class ArchitectureTests(unittest.TestCase):
         cls.memory = Memory()
         cls.agent = VortexAgent(cls.memory)
 
+    @classmethod
+    def tearDownClass(cls):
+        from evolution.workspace import prune_tmp_worktrees
+        prune_tmp_worktrees()
+
     def test_memory_layers(self):
         m = self.memory
         # working memory

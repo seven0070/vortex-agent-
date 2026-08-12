@@ -1,8 +1,15 @@
 """
-Apply a real code/data change to an isolated candidate checkout.
+CandidateGenerator — isolated workspace + actual patch.
 
-Never writes into production backend/*.py. The checkout is a self-contained
-directory under releases/vXXX/.
+    CandidateGenerator
+            ↓
+    real isolated git worktree
+            ↓
+    apply patch (source + overlay)
+            ↓
+    SandboxRunner executes it
+
+Never writes into production backend/*.py.
 """
 from __future__ import annotations
 
@@ -12,8 +19,8 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
-from .compiler import default_overlay
-from .overlay import Overlay, next_generation_id, release_path, releases_dir
+from .overlay import Overlay, next_generation_id, releases_dir
+from .workspace import COMPILER_REL, CandidateWorkspace
 
 
 HERE = Path(__file__).resolve().parent
@@ -21,12 +28,13 @@ FIXTURES = HERE.parent / "tests" / "fixtures" / "golden_tasks.json"
 
 
 class CandidatePatcher:
-    """Copy evolvable modules into a versioned checkout and apply a concrete overlay patch."""
+    """Versioned candidate: git worktree (preferred) + overlay checkout + real source patch."""
 
     def __init__(self, memory=None, base_path: Path = None):
         self.memory = memory
         self.base = base_path or releases_dir()
         self.base.mkdir(parents=True, exist_ok=True)
+        self.workspace = CandidateWorkspace()
 
     def create_candidate(self, parent_generation: int, hypothesis: Dict[str, Any],
                          change_set: List[Dict], parent_overlay: Overlay = None) -> Dict[str, Any]:
@@ -47,8 +55,27 @@ class CandidatePatcher:
         new_overlay.data["parent_generation"] = parent_generation
         applied = self._apply_hypothesis(new_overlay, hypothesis, change_set)
 
-        # isolated copies the candidate actually executes
-        shutil.copy2(HERE / "compiler.py", checkout / "compiler.py")
+        ws = self.workspace.create(gen_id, release_dir)
+        source_patch = {"applied": False, "diff": "", "replacements": []}
+        if ws.get("worktree_dir"):
+            want_chain = any("chained" in a or "compiler" in a for a in applied) or True
+            source_patch = self.workspace.apply_source_patch(
+                Path(ws["worktree_dir"]),
+                chained=want_chain,
+                power=want_chain,
+            )
+            if source_patch.get("replacements"):
+                applied.extend(source_patch["replacements"])
+
+        # isolated copies the candidate harness actually executes
+        if ws.get("worktree_dir"):
+            wt_compiler = Path(ws["worktree_dir"]) / COMPILER_REL
+            if wt_compiler.exists():
+                shutil.copy2(wt_compiler, checkout / "compiler.py")
+            else:
+                shutil.copy2(HERE / "compiler.py", checkout / "compiler.py")
+        else:
+            shutil.copy2(HERE / "compiler.py", checkout / "compiler.py")
         shutil.copy2(HERE / "harness.py", checkout / "harness.py")
         new_overlay.dump(checkout / "overlay.json")
         new_overlay.dump(release_dir / "overlay.json")
@@ -62,12 +89,16 @@ class CandidatePatcher:
             f"--- parent overlay gen {parent_generation}",
             f"+++ candidate overlay gen {gen_id}",
             f"@@ hypothesis: {hypothesis.get('hypothesis', '')}",
+            f"@@ workspace: {ws.get('workspace_mode')}",
         ]
         for item in applied:
             diff_lines.append(f"+ {item}")
         diff_text = "\n".join(diff_lines) + "\n"
         (patches / "applied.diff").write_text(diff_text)
         (patches / "change_set.json").write_text(json.dumps(change_set, indent=2))
+        source_diff = source_patch.get("diff") or ""
+        if source_diff:
+            (patches / "source.diff").write_text(source_diff)
 
         router_raw = "{}"
         try:
@@ -85,6 +116,12 @@ class CandidatePatcher:
             "applied_patches": applied,
             "release_dir": str(release_dir),
             "checkout_dir": str(checkout),
+            "worktree_dir": ws.get("worktree_dir"),
+            "git_branch": ws.get("git_branch"),
+            "workspace_mode": ws.get("workspace_mode"),
+            "workspace_error": ws.get("workspace_error"),
+            "repo_root": ws.get("repo_root"),
+            "source_diff": source_diff,
             "overlay": new_overlay.data,
             "patch_diff": diff_text,
             "created_at": datetime.now().isoformat(),

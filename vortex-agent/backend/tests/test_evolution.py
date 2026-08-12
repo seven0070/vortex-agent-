@@ -18,6 +18,9 @@ from swarm import VortexAgent  # noqa: E402
 from self_improve import compile_math as rsi_compile_math  # noqa: E402
 
 
+from evolution.workspace import prune_tmp_worktrees as _prune_tmp_worktrees  # noqa: E402
+
+
 class CompilerOverlayTests(unittest.TestCase):
     def tearDown(self):
         set_overlay(None)
@@ -67,6 +70,19 @@ class RealPatchAndSandboxTests(unittest.TestCase):
         diff = Path(cand["release_dir"]) / "patches" / "applied.diff"
         self.assertTrue(diff.exists())
         self.assertIn("chained_arithmetic", diff.read_text())
+        self.assertIn(cand.get("workspace_mode"), ("git_worktree", "fallback_copy"))
+        if cand.get("workspace_mode") == "git_worktree":
+            self.assertTrue(cand.get("worktree_dir"))
+            self.assertTrue(Path(cand["worktree_dir"]).exists())
+            self.assertTrue((cand.get("git_branch") or "").startswith("evolution/"))
+            src = cand.get("source_diff") or ""
+            src_file = Path(cand["release_dir"]) / "patches" / "source.diff"
+            if src_file.exists():
+                src = src + src_file.read_text()
+            self.assertIn("chained_arithmetic", src)
+            # production source must stay untouched
+            prod = Path(__file__).resolve().parents[1] / "evolution" / "compiler.py"
+            self.assertIn('"chained_arithmetic": False', prod.read_text())
 
     def test_sandbox_is_real_subprocess_not_mock(self):
         patcher = CandidatePatcher()
@@ -85,6 +101,9 @@ class RealPatchAndSandboxTests(unittest.TestCase):
         names = {c["name"]: c["ok"] for c in detail.get("cases", [])}
         self.assertTrue(names.get("nl-math-multiply"))
         self.assertTrue(names.get("reasoning-chain"))
+        wt = (res["result"].get("worktree_tests") or {})
+        if wt.get("ran"):
+            self.assertTrue(wt.get("passed"), wt.get("output"))
 
     def test_sandbox_rejects_missing_checkout(self):
         res = SandboxRunner().run_tests({"checkout_dir": "/tmp/does-not-exist-vortex", "change_set": []})
@@ -134,6 +153,10 @@ class EndToEndEvolutionTests(unittest.TestCase):
         cls.memory = Memory()
         cls.agent = VortexAgent(cls.memory)
 
+    @classmethod
+    def tearDownClass(cls):
+        _prune_tmp_worktrees()
+
     def test_full_loop_promotes_real_compiler_improvement(self):
         set_overlay(default_overlay())
         activate(Overlay.genesis())
@@ -149,6 +172,10 @@ class EndToEndEvolutionTests(unittest.TestCase):
         self.assertFalse((rec.get("sandbox_result") or {}).get("mock", True))
         self.assertFalse((rec.get("canary_results") or {}).get("mock", True))
         self.assertIn("chained_arithmetic", " ".join(rec.get("applied_patches") or []))
+        self.assertTrue(rec.get("council") is None or rec["council"].get("executes") is False)
+        self.assertTrue(rec.get("resolution"))
+        self.assertNotEqual((rec.get("resolution") or {}).get("action"), "denied")
+        self.assertTrue(rec.get("monitor"))
 
         after = compile_math("what is 15 times 3 plus 5")
         self.assertEqual(after, "print(15 * 3 + 5)")

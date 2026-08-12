@@ -1,5 +1,9 @@
 """
 Isolated sandbox: real subprocess, timeout, no production imports, no mock pass.
+
+Runs:
+  1. candidate harness (overlay compiler + golden fixtures)
+  2. worktree unittest (tests.test_rsi.CompilerTests) when a git worktree exists
 """
 from __future__ import annotations
 
@@ -99,6 +103,48 @@ class SandboxRunner:
             result["passed"] = False
             result["tests_pass"] = False
             result["output"] += "\nrefusing mock sandbox result"
+            tests_pass = False
+
+        worktree_run = self._run_worktree_unittests(candidate, sandbox_home)
+        result["worktree_tests"] = worktree_run
+        if worktree_run.get("ran") and not worktree_run.get("passed"):
+            tests_pass = False
+            result["passed"] = False
+            result["tests_pass"] = False
+            result["output"] += "\nworktree unittest failed:\n" + (worktree_run.get("output") or "")[-800:]
+
         candidate["sandbox_result"] = result
         candidate["status"] = "sandbox_passed" if tests_pass else "sandbox_failed"
         return {"status": "success" if tests_pass else "error", "result": result, "passed": tests_pass}
+
+    def _run_worktree_unittests(self, candidate: Dict[str, Any], sandbox_home: Path) -> Dict[str, Any]:
+        worktree = Path(candidate.get("worktree_dir") or "")
+        backend = worktree / "vortex-agent" / "backend"
+        if not worktree.exists() or not backend.exists():
+            return {"ran": False, "passed": True, "reason": "no worktree"}
+        env = {
+            "PATH": os.environ.get("PATH", "/usr/bin:/bin"),
+            "HOME": str(sandbox_home),
+            "VORTEX_HOME": str(sandbox_home / "worktree_home"),
+            "PYTHONPATH": str(backend),
+            "PYTHONDONTWRITEBYTECODE": "1",
+            "LANG": os.environ.get("LANG", "C.UTF-8"),
+        }
+        try:
+            proc = subprocess.run(
+                [sys.executable, "-m", "unittest", "tests.test_rsi.CompilerTests", "-q"],
+                capture_output=True,
+                text=True,
+                timeout=self.timeout,
+                cwd=str(backend),
+                env=env,
+            )
+        except subprocess.TimeoutExpired:
+            return {"ran": True, "passed": False, "output": "worktree unittest timed out"}
+        out = (proc.stdout or "") + (proc.stderr or "")
+        return {
+            "ran": True,
+            "passed": proc.returncode == 0,
+            "returncode": proc.returncode,
+            "output": out[-1500:],
+        }
