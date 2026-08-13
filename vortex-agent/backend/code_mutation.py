@@ -462,13 +462,14 @@ class ApprovalQueue:
         return {"restored": restored, "errors": errors, "state": "rolled_back"}
 
     def stats(self) -> Dict[str, Any]:
-        by = {}
+        by: Dict[str, int] = {}
         for f in self.dir.glob("m_*.json"):
             try:
-                by[json.loads(f.read_text()).get("state", "?")] = \
-                    by.get(json.loads(f.read_text()).get("state", "?"), 0) + 1
-            except Exception:
+                # was parsed twice per file (once for the key, once for the lookup)
+                state = json.loads(f.read_text()).get("state", "?")
+            except (json.JSONDecodeError, OSError, UnicodeDecodeError):
                 continue
+            by[state] = by.get(state, 0) + 1
         return {"total": sum(by.values()), "by_state": by, "queue_dir": str(self.dir)}
 
 

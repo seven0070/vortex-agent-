@@ -40,4 +40,27 @@ __pycache__/
 .Python
 *.so
 *.egg-info/
+
+# Vortex runtime state (VORTEX_HOME). Defaults to ~/.vortex, but pointing it at the
+# repo is a normal dev workflow — without these rules a run would commit the agent's
+# database, learned memory, and queued self-modifications.
+.vortex/
+memory.db
+memory.db-wal
+memory.db-shm
+vectors.json
+bug_patterns.json
+MEMORY.md
+USER.md
+skills/
+releases/
+traces/
+**/sovereign/state.json
+**/governance/audit.jsonl
+pending_mutations/
+mutation_backups/
+workspace/
+
+# Sandbox scratch from the self-modification engine
+vortex_sandbox_*/
 ```
