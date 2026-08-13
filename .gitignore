@@ -40,4 +40,10 @@ __pycache__/
 .Python
 *.so
 *.egg-info/
+
+# Desktop app (Electron + React)
+desktop/node_modules/
+desktop/dist/
+desktop/dist-electron/
+desktop/.vite/
 ```
