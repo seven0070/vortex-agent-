@@ -123,6 +123,20 @@ def llm_route(message: str, role: str = "general",
     return tool, args
 
 
+def profile_context() -> str:
+    """
+    Guaranteed context (Hermes Tier 1): MEMORY.md + USER.md, loaded every turn.
+
+    Unlike vector recall this is not probabilistic — if the user told us their name,
+    it is in the prompt, every time, with no retrieval step.
+    """
+    try:
+        from profile_memory import ProfileMemory
+        return ProfileMemory().context_block()
+    except Exception:
+        return ""
+
+
 def llm_role_reply(role: str, name: str, message: str,
                    memory_ctx: Optional[List[str]] = None) -> Optional[str]:
     """A specialist actually reasoning in role. None -> caller uses its template."""
@@ -131,6 +145,9 @@ def llm_role_reply(role: str, name: str, message: str,
         return None
 
     system = ROLE_SYSTEM.get(role, ROLE_SYSTEM["general"])
+    prof = profile_context()
+    if prof:
+        system += f"\n\nAlways-known context:\n{prof}"
     ctx = ""
     if memory_ctx:
         joined = "\n".join(f"- {str(c)[:160]}" for c in memory_ctx[:4])

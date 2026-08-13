@@ -136,6 +136,10 @@ class VortexBot:
                     "tool": pack["tool"], "status": "success",
                     "route": "rescue", "rescued": True,
                 }
+                try:
+                    self.agent._turn_rescued = True
+                except Exception:
+                    pass
 
         self.agent.memory.save_message(f"bot:{self.name}", reply)
         self.agent.vector.remember(f"[{self.name}/{self.role}] {message} -> {reply[:200]}")
@@ -281,6 +285,10 @@ class VortexBot:
             return f"(bot '{bot_name}' offline)"
         print(f"   📨 {self.name} → {bot_name}: {task[:60]}")
         self.agent.memory.log_event("delegate", f"{self.name}->{bot_name}:{task[:60]}")
+        try:
+            self.agent._turn_steps.append(f"delegate → {bot_name}: {task[:80]}")
+        except Exception:
+            pass
         return self.agent.bots[bot_name].handle(task, from_bot=self.name)
 
     # ── improver bot ──
@@ -404,6 +412,13 @@ class VortexBot:
             result = tool.execute(**args)
         except Exception as e:
             result = ToolResult("error", {}, f"Tool crashed: {e}")
+
+        # per-turn accounting so skill capture knows how complex this turn was
+        try:
+            self.agent._turn_tool_calls += 1
+            self.agent._turn_steps.append(f"{self.name}: {tool_name}({str(args)[:60]})")
+        except Exception:
+            pass
         self.agent.memory.log_event("tool_call", f"{self.name}:{tool_name}:{result.status}")
         if result.status == "error":
             self.agent.bugs.add({"bot": self.name, "tool": tool_name,
@@ -443,6 +458,17 @@ class VortexAgent:
         self.bugs = BugLibrary()
         self.bots = {}
         self.rsi = RapidSelfImprovement(self)
+
+        # per-turn accounting for autonomous skill capture
+        self._turn_tool_calls = 0
+        self._turn_steps = []
+        self._turn_rescued = False
+        self.skill_manager = None
+        try:
+            from skill_manage import SkillManager
+            self.skill_manager = SkillManager(self)
+        except Exception as e:
+            print(f"[agent] skill manager not loaded: {e}")
 
         # ── new layers (import lazily to avoid circular) ──
         self.governance = None
@@ -543,6 +569,18 @@ class VortexAgent:
 
     def chat(self, message):
         self.memory.save_message("user", message)
+
+        # Hermes-inspired: durable session turn + autonomous profile capture
+        try:
+            if getattr(self.memory, "sessions", None):
+                self.memory.sessions.record("user", message)
+        except Exception:
+            pass
+        try:
+            self.capture_profile_facts(message)
+        except Exception:
+            pass
+
         # observability trace start
         trace_id = None
         if self.observability:
@@ -568,7 +606,60 @@ class VortexAgent:
             except:
                 pass
 
+        # record the reply for cross-session recall
+        try:
+            if getattr(self.memory, "sessions", None):
+                self.memory.sessions.record("assistant", reply)
+        except Exception:
+            pass
+
+        # autonomous skill creation after a complex turn (Hermes skill_manage)
+        try:
+            self.maybe_capture_skill(message, reply)
+        except Exception:
+            pass
+
         return reply
+
+    # ── Hermes-inspired capabilities ──
+    def capture_profile_facts(self, message: str) -> dict:
+        """Self-nudging memory: persist durable facts into MEMORY.md / USER.md."""
+        prof = getattr(self.memory, "profile", None)
+        if not prof:
+            return {}
+        from profile_memory import extract_profile_facts
+        found = extract_profile_facts(message)
+        written = {"user": [], "memory": []}
+        for f in found.get("user", []):
+            if prof.remember_user(f).get("written"):
+                written["user"].append(f)
+        for f in found.get("memory", []):
+            if prof.remember(f).get("written"):
+                written["memory"].append(f)
+        return written
+
+    def maybe_capture_skill(self, goal: str, reply: str) -> Optional[dict]:
+        """After a complex turn, write down how it was done."""
+        if not self.skill_manager:
+            return None
+        calls = self._turn_tool_calls
+        steps = self._turn_steps
+        self._turn_tool_calls, self._turn_steps = 0, []
+        if not self.skill_manager.is_complex(tool_calls=calls, steps=len(steps),
+                                             rescued=self._turn_rescued):
+            self._turn_rescued = False
+            return None
+        self._turn_rescued = False
+        return self.skill_manager.capture(
+            goal=goal, steps=steps or [f"reply: {reply[:120]}"],
+            success="error" not in reply.lower()[:60],
+        )
+
+    def recall_sessions(self, query: str, limit: int = 5) -> list:
+        """Cross-session keyword recall — 'what did we discuss about X'."""
+        if not getattr(self.memory, "sessions", None):
+            return []
+        return self.memory.sessions.search(query, limit=limit)
 
     def run_orchestrated(self, goal: str, original_message: str = None) -> str:
         """Full orchestration path: Goal → Understand → Plan → Decompose → Route → Execute → Observe → Evaluate → Recover → Council → Resolution → Complete"""

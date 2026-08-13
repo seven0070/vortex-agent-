@@ -45,6 +45,11 @@ def main():
                 "  /benchmark             Vortex comprehensive benchmark\n"
                 "  /observability         traces + metrics\n"
                 "  /llm                   LLM provider status (Phase 3)\n"
+                "  /sessions              list past sessions\n"
+                "  /recall <query>        search ALL past conversations\n"
+                "  /profile               MEMORY.md + USER.md (always-on context)\n"
+                "  /remember <fact>       persist a durable fact\n"
+                "  /autoskills            skills the agent wrote itself\n"
                 "  anything else          chief orchestrates (add 'orchestrate:' prefix for full graph)"
             )
             continue
@@ -191,6 +196,58 @@ def main():
                 print("    export VORTEX_LLM_PROVIDER=openai   # or anthropic / ollama")
                 print("    export VORTEX_LLM_API_KEY=sk-...")
                 print("    export VORTEX_LLM_MODEL=gpt-4o-mini")
+            continue
+
+        if msg == "/sessions":
+            ss = getattr(agent.memory, "sessions", None)
+            if not ss:
+                print("  sessions not loaded")
+                continue
+            print(f"  {ss.stats()}")
+            for s in ss.list_sessions(10):
+                print(f"   {s['id']}  turns={s['turns']:<4} {s['started_at'][:19]}  {s['title'][:40]}")
+            continue
+
+        if msg.startswith("/recall"):
+            q = msg[len("/recall"):].strip()
+            if not q:
+                print("  usage: /recall <query>")
+                continue
+            hits = agent.recall_sessions(q, limit=8)
+            if not hits:
+                print("  (nothing found in past conversations)")
+            for h in hits:
+                print(f"   [{h['role']}] {h['content'][:110]}")
+            continue
+
+        if msg == "/profile":
+            prof = getattr(agent.memory, "profile", None)
+            if not prof:
+                print("  profile memory not loaded")
+                continue
+            print(f"  {prof.stats()}\n")
+            block = prof.context_block()
+            print("  " + (block.replace("\n", "\n  ") if block else "(nothing learned yet)"))
+            continue
+
+        if msg.startswith("/remember"):
+            fact = msg[len("/remember"):].strip()
+            prof = getattr(agent.memory, "profile", None)
+            if not prof or not fact:
+                print("  usage: /remember <fact>")
+                continue
+            print(f"  {prof.remember(fact)}")
+            continue
+
+        if msg == "/autoskills":
+            if not agent.skill_manager:
+                print("  skill manager not loaded")
+                continue
+            st = agent.skill_manager.stats()
+            print(f"  created={st['auto_created']} improved={st['auto_improved']} "
+                  f"total={st['total_skills']}")
+            for s in st["tracked"]:
+                print(f"   {s['name']:<28} uses={s['uses']} success={s['success_rate']}")
             continue
 
         # direct-bot addressing

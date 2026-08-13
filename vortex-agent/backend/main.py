@@ -63,6 +63,60 @@ async def llm_status():
     from llm import get_llm
     return get_llm().status()
 
+@app.get("/api/sessions")
+async def sessions_list():
+    """Hermes-inspired: durable conversation sessions."""
+    if not getattr(memory, "sessions", None):
+        return {"error": "sessions not loaded"}
+    return {"sessions": memory.sessions.list_sessions(20), "stats": memory.sessions.stats()}
+
+@app.get("/api/sessions/search")
+async def sessions_search(query: str = "", limit: int = 8):
+    """Cross-session keyword recall (FTS5)."""
+    if not getattr(memory, "sessions", None):
+        return {"error": "sessions not loaded"}
+    return {"query": query, "results": memory.sessions.search(query, limit=limit)}
+
+@app.get("/api/sessions/{session_id}")
+async def sessions_get(session_id: str):
+    if not getattr(memory, "sessions", None):
+        return {"error": "sessions not loaded"}
+    return memory.sessions.get_session(session_id)
+
+@app.get("/api/profile")
+async def profile_get():
+    """MEMORY.md + USER.md — guaranteed context loaded every turn."""
+    if not getattr(memory, "profile", None):
+        return {"error": "profile memory not loaded"}
+    p = memory.profile
+    return {"memory_md": p.read_memory(), "user_md": p.read_user(),
+            "context_block": p.context_block(), "stats": p.stats()}
+
+@app.post("/api/profile/remember")
+async def profile_remember(payload: dict):
+    """Write a durable fact to MEMORY.md (kind=fact) or USER.md (kind=user)."""
+    if not getattr(memory, "profile", None):
+        return {"error": "profile memory not loaded"}
+    content = payload.get("content", "")
+    kind = payload.get("kind", "fact")
+    if not content:
+        return {"error": "content required"}
+    p = memory.profile
+    return p.remember_user(content) if kind == "user" else p.remember(content)
+
+@app.post("/api/profile/forget")
+async def profile_forget(payload: dict):
+    if not getattr(memory, "profile", None):
+        return {"error": "profile memory not loaded"}
+    return memory.profile.forget(payload.get("needle", ""))
+
+@app.get("/api/skills/auto")
+async def skills_auto():
+    """Autonomously created/improved skills (Hermes skill_manage)."""
+    if not agent.skill_manager:
+        return {"error": "skill manager not loaded"}
+    return agent.skill_manager.stats()
+
 @app.get("/api/bots")
 async def bots():
     return agent.list_bots()

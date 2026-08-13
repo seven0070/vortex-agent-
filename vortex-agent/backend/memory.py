@@ -84,6 +84,20 @@ class Memory:
         self.agent_memory.set_conn(self.conn)
         self.episodic.set_conn(self.conn)
 
+        # Hermes-inspired: cross-session recall (Tier 2) + guaranteed context (Tier 1)
+        self.sessions = None
+        self.profile = None
+        try:
+            from sessions import SessionStore
+            self.sessions = SessionStore(self.conn)
+        except Exception as e:
+            print(f"[memory] sessions not loaded: {e}")
+        try:
+            from profile_memory import ProfileMemory
+            self.profile = ProfileMemory()
+        except Exception as e:
+            print(f"[memory] profile memory not loaded: {e}")
+
     def _init(self):
         self.conn.executescript("""
             CREATE TABLE IF NOT EXISTS messages (

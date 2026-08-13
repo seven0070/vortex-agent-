@@ -32,6 +32,46 @@ Check what's active with `/llm` in the CLI or `GET /api/llm`. The layer is stdli
 dependencies) and fails soft: if the provider errors or times out, Vortex degrades to the
 deterministic path instead of crashing.
 
+## Persistence (Hermes-inspired)
+
+Vortex had seven memory layers but no *sessions*, no guaranteed context, and a skill library
+with a single hardcoded entry. These three close that gap — all deterministic, no LLM required:
+
+**Cross-session recall** — every turn is recorded to a durable session and indexed with SQLite
+FTS5, so "what did we discuss about the retry bug?" works across restarts. Falls back to LIKE
+scanning on SQLite builds without FTS5.
+
+```
+/sessions              list past sessions
+/recall <query>        search ALL past conversations
+```
+
+**Guaranteed context (`MEMORY.md` + `USER.md`)** — durable facts live in two hand-editable
+markdown files in `VORTEX_HOME`, loaded into *every* turn with no retrieval step. Unlike vector
+recall this is not probabilistic: if you said your name, it is in the prompt. Both files are
+size-capped (2200 / 1375 chars) and evict oldest-first, so "always in context" can't become
+unbounded prompt bloat. Facts are captured automatically from conversation.
+
+```
+/profile               show MEMORY.md + USER.md
+/remember <fact>       persist a durable fact
+```
+
+**Autonomous skill creation** — after a complex turn (2+ tool calls, 2+ delegations, or any
+rescue/retry) the agent writes the procedure to its skill library. Repeat the task and it
+*improves* the existing skill — merging steps, tracking `uses` and `success_rate` — instead of
+duplicating it.
+
+```
+/autoskills            skills the agent wrote itself
+```
+
+| | Before | After |
+|---|---|---|
+| Past conversations | not searchable | FTS5 across all sessions |
+| Durable facts | probabilistic vector recall | guaranteed, every turn |
+| Skill library | 1 hardcoded entry | written + improved from experience |
+
 ## Reference Inspirations (architecture borrowed, not wholesale merged)
 
 | Vortex capability | Reference repo | What we took |
@@ -279,6 +319,13 @@ Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 | POST | `/api/orchestration/run` | run graph |
 | GET | `/api/observability` | traces + metrics |
 | GET | `/api/llm` | LLM provider status (Phase 3) |
+| GET | `/api/sessions` | list durable sessions |
+| GET | `/api/sessions/search?query=` | cross-session FTS5 recall |
+| GET | `/api/sessions/{id}` | full session transcript |
+| GET | `/api/profile` | MEMORY.md + USER.md + context block |
+| POST | `/api/profile/remember` | persist durable fact (`kind`: fact/user) |
+| POST | `/api/profile/forget` | remove matching entries |
+| GET | `/api/skills/auto` | autonomously created skills |
 | POST | `/api/resolution/resolve` | resolve candidates |
 | POST | `/api/rsi/eval/benchmark` | comprehensive benchmark |
 
@@ -300,7 +347,7 @@ vortex-agent/backend/
   main.py (FastAPI 0.4.0)
   cli.py
   static/index.html (full architecture dashboard)
-  tests/test_rsi.py + test_architecture.py + test_llm.py
+  tests/test_rsi.py + test_architecture.py + test_llm.py + test_hermes_features.py
 ```
 
 ## Implementation order completed
