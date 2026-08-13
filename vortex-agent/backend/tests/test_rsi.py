@@ -15,6 +15,9 @@ class CompilerTests(unittest.TestCase):
     def test_math(self):
         self.assertEqual(compile_math("what is 12 times 8"), "print(12 * 8)")
         self.assertEqual(compile_math("sum of 40 and 2"), "print(40 + 2)")
+        # chained arithmetic must keep the full expression (was: 45, ignoring "+ 5")
+        self.assertEqual(compile_math("what is 15 times 3 plus 5"), "print(15 * 3 + 5)")
+        self.assertEqual(compile_math("calculate 100 divided by 4"), "print(100 / 4)")
 
     def test_fib(self):
         self.assertIn("print(fib(10))", compile_fib("fibonacci of 10"))
@@ -38,6 +41,10 @@ class RSIIntegrationTests(unittest.TestCase):
     def test_nl_math_compiles_in_turn(self):
         reply = self.agent.chat("what is 12 times 8")
         self.assertIn("96", reply)
+
+    def test_chained_math_in_turn(self):
+        reply = self.agent.chat("what is 15 times 3 plus 5")
+        self.assertIn("50", reply)
 
     def test_fibonacci_of_n(self):
         reply = self.agent.chat("fibonacci of 10")
