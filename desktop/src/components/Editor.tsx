@@ -1,17 +1,12 @@
 import { Check, GitCompare, X } from 'lucide-react';
 
 type EditorProps = {
+  diffText: string;
   onAccept: () => void;
   onReject: () => void;
 };
 
-const SAMPLE_DIFF = `diff --git a/backend/orchestrator.py b/backend/orchestrator.py
-@@ -119,6 +119,8 @@ class VortexAgent:
--        return self.planner.plan(goal)
-+        context = self.memory.full_context_for_orchestrator(goal)
-+        return self.planner.plan(goal, context=context)`;
-
-export default function Editor({ onAccept, onReject }: EditorProps) {
+export default function Editor({ diffText, onAccept, onReject }: EditorProps) {
   return (
     <section className="flex h-full w-full flex-col bg-zinc-950">
       <header className="flex items-center justify-between border-b border-zinc-800 px-4 py-3">
@@ -37,7 +32,7 @@ export default function Editor({ onAccept, onReject }: EditorProps) {
         </div>
       </header>
 
-      <pre className="min-h-0 flex-1 overflow-auto bg-zinc-900/40 p-4 text-xs leading-relaxed text-zinc-300">{SAMPLE_DIFF}</pre>
+      <pre className="min-h-0 flex-1 overflow-auto bg-zinc-900/40 p-4 text-xs leading-relaxed text-zinc-300">{diffText}</pre>
     </section>
   );
 }

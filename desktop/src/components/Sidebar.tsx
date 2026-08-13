@@ -5,6 +5,7 @@ export type SidebarTab = 'files' | 'skills' | 'memory';
 type SidebarProps = {
   activeTab: SidebarTab;
   onTabChange: (tab: SidebarTab) => void;
+  files: string[];
   skills: string[];
   memories: string[];
 };
@@ -15,9 +16,7 @@ const tabs: Array<{ key: SidebarTab; label: string; icon: React.ComponentType<{ 
   { key: 'memory', label: 'Memory', icon: Brain },
 ];
 
-export default function Sidebar({ activeTab, onTabChange, skills, memories }: SidebarProps) {
-  const files = ['vortex-agent/backend/main.py', 'vortex-agent/backend/orchestrator.py', 'vortex-agent/backend/memory.py'];
-
+export default function Sidebar({ activeTab, onTabChange, files, skills, memories }: SidebarProps) {
   return (
     <aside className="flex h-full w-full flex-col border-r border-zinc-800 bg-zinc-950">
       <div className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-zinc-200">Workspace</div>

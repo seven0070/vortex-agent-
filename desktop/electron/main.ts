@@ -2,8 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import { ChildProcess, spawn } from 'child_process';
 import path from 'path';
 import fs from 'fs';
-
-const BACKEND_PORT = '8000';
+import { BACKEND_PORT } from './constants';
 let mainWindow: BrowserWindow | null = null;
 let backendProcess: ChildProcess | null = null;
 
@@ -83,7 +82,7 @@ function createWindow(): void {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   });
 
@@ -108,7 +107,7 @@ function stopBackend(): void {
     return;
   }
 
-  backendProcess.kill('SIGTERM');
+  backendProcess.kill();
   backendProcess = null;
 }
 

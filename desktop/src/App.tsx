@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Send, Sparkles } from 'lucide-react';
 import Editor from './components/Editor';
 import Sidebar, { type SidebarTab } from './components/Sidebar';
@@ -8,8 +8,18 @@ import { chat, fetchMemory, fetchOrchestration, fetchTools, type ToolExecution }
 export default function App() {
   const [activeTab, setActiveTab] = useState<SidebarTab>('files');
   const [prompt, setPrompt] = useState('');
+  const [files] = useState<string[]>([
+    'vortex-agent/backend/main.py',
+    'vortex-agent/backend/orchestrator.py',
+    'vortex-agent/backend/memory.py',
+  ]);
   const [skills, setSkills] = useState<string[]>([]);
   const [memories, setMemories] = useState<string[]>([]);
+  const [diffText] = useState<string>(`diff --git a/backend/orchestrator.py b/backend/orchestrator.py
+@@ -119,6 +119,8 @@ class VortexAgent:
+-        return self.planner.plan(goal)
++        context = self.memory.full_context_for_orchestrator(goal)
++        return self.planner.plan(goal, context=context)`);
   const [logs, setLogs] = useState<ToolExecution[]>([
     {
       id: 1,
@@ -80,7 +90,7 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  const canSend = useMemo(() => prompt.trim().length > 0, [prompt]);
+  const canSend = prompt.trim().length > 0;
 
   const handleSend = async () => {
     const message = prompt.trim();
@@ -150,10 +160,10 @@ export default function App() {
   return (
     <main className="h-screen bg-zinc-950 text-zinc-100">
       <section className="grid h-full grid-cols-1 lg:grid-cols-[280px_1fr_360px]">
-        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} skills={skills} memories={memories} />
+        <Sidebar activeTab={activeTab} onTabChange={setActiveTab} files={files} skills={skills} memories={memories} />
 
         <div className="relative min-w-0 overflow-hidden">
-          <Editor onAccept={handleAccept} onReject={handleReject} />
+          <Editor diffText={diffText} onAccept={handleAccept} onReject={handleReject} />
 
           <div className="pointer-events-none absolute inset-x-0 bottom-0 p-4">
             <form

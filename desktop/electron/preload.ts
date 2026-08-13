@@ -1,5 +1,6 @@
 import { contextBridge } from 'electron';
+import { BACKEND_PORT } from './constants';
 
 contextBridge.exposeInMainWorld('electronAPI', {
-  backendPort: '8000',
+  backendPort: BACKEND_PORT,
 });

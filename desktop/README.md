@@ -16,7 +16,7 @@ Professional 3-pane desktop workspace for local Vortex Agent usage on Windows.
 From repository root:
 
 ```bash
-cd /home/runner/work/vortex-agent-/vortex-agent-/desktop
+cd desktop
 npm install --legacy-peer-deps
 ```
 
