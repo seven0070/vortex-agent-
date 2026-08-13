@@ -55,6 +55,7 @@ Every improvement gets:
 """
 from __future__ import annotations
 
+import ast
 import json
 import re
 import time
@@ -111,7 +112,65 @@ def tokenize(text: str):
     return [t for t in re.findall(r"[a-z0-9]+", (text or "").lower()) if t not in STOP and len(t) > 1]
 
 
+# Word operators translated into arithmetic symbols (multi-word first, so
+# "divided by" wins over the bare "by" / "over" forms). Used to keep the full
+# expression of a chained query like "what is 15 times 3 plus 5".
+_WORD_OPS = [
+    (re.compile(r"\bmultiplied by\b", re.I), "*"),
+    (re.compile(r"\bdivided by\b", re.I), "/"),
+    (re.compile(r"\badded to\b", re.I), "+"),
+    (re.compile(r"\bsubtracted by\b", re.I), "-"),
+    (re.compile(r"\btimes\b", re.I), "*"),
+    (re.compile(r"\bplus\b", re.I), "+"),
+    (re.compile(r"\bminus\b", re.I), "-"),
+    (re.compile(r"\bover\b", re.I), "/"),
+    (re.compile(r"\bx\b", re.I), "*"),
+]
+
+# A run of one or more binary arithmetic operations: "15 * 3 + 5", "100 / 4", ...
+_ARITH_RUN = re.compile(r"[-+]?\d+(?:\.\d+)?(?:\s*[+\-*/]\s*[-+]?\d+(?:\.\d+)?)+")
+
+# Only pure numeric arithmetic is accepted — no names, calls, attributes.
+_SAFE_ARITH_NODES = (
+    ast.Expression, ast.BinOp, ast.UnaryOp,
+    ast.Add, ast.Sub, ast.Mult, ast.Div,
+    ast.USub, ast.UAdd, ast.Constant,
+)
+
+
+def _extract_arithmetic(msg: str) -> Optional[str]:
+    """Translate natural-language operators to symbols and return a validated
+    arithmetic expression, supporting chains like "15 times 3 plus 5" → "15 * 3 + 5"."""
+    if not msg:
+        return None
+    s = msg.lower()
+    replaced = False
+    for rx, op in _WORD_OPS:
+        s, n = rx.subn(op, s)
+        if n:
+            replaced = True
+    if not replaced:
+        return None
+    m = _ARITH_RUN.search(s)
+    if not m:
+        return None
+    expr = m.group(0).strip()
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except SyntaxError:
+        return None
+    for node in ast.walk(tree):
+        if not isinstance(node, _SAFE_ARITH_NODES):
+            return None
+    return expr
+
+
 def compile_math(msg: str) -> Optional[str]:
+    # Chained expressions first: "what is 15 times 3 plus 5" → print(15 * 3 + 5)
+    expr = _extract_arithmetic(msg)
+    if expr:
+        return f"print({expr})"
+    # Fallback: original single-operator patterns (exact backward compatibility)
     for rx, op in MATH_PATTERNS:
         m = rx.search(msg)
         if m:
