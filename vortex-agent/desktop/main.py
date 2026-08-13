@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import sys
+import threading
 
 from PyQt6.QtGui import QAction, QIcon
 from PyQt6.QtWidgets import QApplication, QMenu, QSystemTrayIcon
@@ -25,7 +26,7 @@ def build_tray(app: QApplication, window: MainWindow) -> QSystemTrayIcon:
     hide_action.triggered.connect(window.hide)
 
     def quit_app() -> None:
-        window._quit_to_tray = False
+        window.set_quit_on_close(True)
         window.backend_manager.stop()
         tray.hide()
         app.quit()
@@ -50,7 +51,8 @@ def main() -> int:
     config = config_manager.load()
 
     backend_manager = BackendManager(config)
-    backend_manager.start_if_needed()
+    if not config.connect_remote and config.auto_start_backend:
+        threading.Thread(target=backend_manager.start_if_needed, daemon=True).start()
 
     api_client = VortexApiClient(config.active_backend_url)
     window = MainWindow(api_client, config, config_manager, backend_manager)

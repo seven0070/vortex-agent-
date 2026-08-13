@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import threading
 from typing import Any
 
 import requests
@@ -303,25 +304,41 @@ class MainWindow(QMainWindow):
         QMessageBox.warning(self, title, str(error))
 
     def reconnect_backend(self) -> None:
-        self._apply_settings()
-        if not self.config.connect_remote:
-            self.backend_manager.start_if_needed()
+        if not self._apply_settings():
+            return
         self.api.set_base_url(self.config.active_backend_url)
-        self.refresh_realtime()
+        if self.config.connect_remote:
+            self.refresh_realtime()
+            return
+        self.connection_label.setText(f"Connecting: {self.api.base_url}")
+        threading.Thread(target=self._start_local_backend_and_refresh, daemon=True).start()
+
+    def _start_local_backend_and_refresh(self) -> None:
+        self.backend_manager.start_if_needed()
+        QTimer.singleShot(0, self.refresh_realtime)
 
     def save_settings(self) -> None:
-        self._apply_settings()
+        if not self._apply_settings():
+            return
         self.config_manager.save(self.config)
         self.timer.setInterval(max(1000, int(self.config.poll_interval_ms)))
         QMessageBox.information(self, "Saved", "Settings saved.")
 
-    def _apply_settings(self) -> None:
+    def _apply_settings(self) -> bool:
+        try:
+            local_port = int(self.local_port.text().strip() or self.config.backend_port)
+            poll_interval = int(self.poll_interval.text().strip() or self.config.poll_interval_ms)
+        except ValueError:
+            QMessageBox.warning(self, "Invalid settings", "Local backend port and refresh interval must be numbers.")
+            return False
+
         self.config.backend_url = self.remote_url.text().strip() or self.config.backend_url
         self.config.backend_host = self.local_host.text().strip() or self.config.backend_host
-        self.config.backend_port = int(self.local_port.text().strip() or self.config.backend_port)
+        self.config.backend_port = local_port
         self.config.connect_remote = self.connect_remote.isChecked()
         self.config.auto_start_backend = self.auto_start.isChecked()
-        self.config.poll_interval_ms = int(self.poll_interval.text().strip() or self.config.poll_interval_ms)
+        self.config.poll_interval_ms = poll_interval
+        return True
 
     def send_chat(self) -> None:
         message = self.chat_input.text().strip()
@@ -460,7 +477,6 @@ class MainWindow(QMainWindow):
             self.audit_view.setPlainText(pretty(audit))
         except requests.RequestException as error:
             self._handle_error("Audit refresh failed", error)
-            return
 
         logs = self.backend_manager.get_logs(text_filter)
         self.backend_log_view.setPlainText("\n".join(logs[-500:]))
@@ -472,3 +488,6 @@ class MainWindow(QMainWindow):
             self.status.showMessage("Vortex Agent Desktop minimized to tray", 3000)
             return
         super().closeEvent(event)
+
+    def set_quit_on_close(self, enabled: bool) -> None:
+        self._quit_to_tray = not enabled

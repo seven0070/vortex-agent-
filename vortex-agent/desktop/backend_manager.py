@@ -24,23 +24,30 @@ class BackendManager:
     def backend_main_path(self) -> Path:
         return Path(__file__).resolve().parents[1] / "backend" / "main.py"
 
-    def is_running(self) -> bool:
+    def _is_url_running(self, base_url: str) -> bool:
+        health_url = f"{base_url.rstrip('/')}/health"
         try:
-            response = requests.get(f"{self.config.local_backend_url}/health", timeout=1)
+            response = requests.get(health_url, timeout=1)
             return response.ok
         except requests.RequestException:
             return False
 
+    def is_running(self) -> bool:
+        return self._is_url_running(self.config.local_backend_url)
+
     def start_if_needed(self, timeout_seconds: int = 15) -> bool:
-        if self.config.connect_remote or not self.config.auto_start_backend:
-            return self.is_running() if not self.config.connect_remote else True
+        if self.config.connect_remote:
+            return self._is_url_running(self.config.backend_url)
+        if not self.config.auto_start_backend:
+            return self.is_running()
         if self.is_running():
             return True
 
         if not self.backend_main_path.exists():
             return False
 
-        creationflags = subprocess.CREATE_NEW_PROCESS_GROUP if sys.platform.startswith("win") else 0
+        creation_group = getattr(subprocess, "CREATE_NEW_PROCESS_GROUP", 0)
+        creationflags = creation_group if sys.platform.startswith("win") else 0
         self.process = subprocess.Popen(
             [sys.executable, str(self.backend_main_path), str(self.config.backend_port)],
             cwd=str(self.backend_main_path.parent),
@@ -66,8 +73,10 @@ class BackendManager:
             return
 
         def read_stream() -> None:
-            assert self.process and self.process.stdout
-            for line in self.process.stdout:
+            process = self.process
+            if not process or not process.stdout:
+                return
+            for line in process.stdout:
                 self._logs.append(line.rstrip())
 
         self._reader_thread = threading.Thread(target=read_stream, daemon=True)
