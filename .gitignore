@@ -41,3 +41,10 @@ __pycache__/
 *.so
 *.egg-info/
 ```
+
+# Desktop (Electron + React)
+desktop/node_modules/
+desktop/dist/
+desktop/dist-electron/
+desktop/release/
+desktop/*.log

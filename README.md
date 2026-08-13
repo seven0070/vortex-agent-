@@ -221,6 +221,22 @@ python -m unittest discover tests -v
 
 Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 
+## Desktop app (Electron + React)
+
+An Electron + React desktop workspace is available in `/desktop` with a 3-pane layout (Sidebar, Editor/Diff, Terminal stream) and local backend integration on `http://localhost:8000`.
+
+```bash
+cd desktop
+npm install --legacy-peer-deps
+npm run electron:dev
+```
+
+To create a Windows installer:
+
+```bash
+npm run build
+```
+
 ### CLI new commands
 
 ```
