@@ -439,9 +439,16 @@ class SandboxRunner:
             # syntax check the change_set files if they were real code edits — here mock
             # Run RSI unit tests subset
             # We'll run via subprocess the eval suite quickly
+            # NOTE: this legacy path tunes PARAMETERS (router weights, lessons); its
+            # change_set is descriptive and no source file is edited, so there is
+            # nothing here to compile-check. Real source mutation lives in
+            # code_mutation.py, which applies actual diffs to a sandboxed COPY and
+            # runs the full suite + frozen eval there before anything is queued for
+            # human approval. Use /api/evolution/code/propose for that.
             result = {
                 "passed": True,
-                "output": "sandbox tests passed (mock)",
+                "output": "parameter-only candidate: no source diff to sandbox "
+                          "(see code_mutation.py for real code mutation)",
                 "latency_ms": int((time.time()-start)*1000),
             }
             # if candidate change_set mentions risky file, do extra check

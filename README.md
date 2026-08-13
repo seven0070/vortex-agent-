@@ -72,6 +72,47 @@ duplicating it.
 | Durable facts | probabilistic vector recall | guaranteed, every turn |
 | Skill library | 1 hardcoded entry | written + improved from experience |
 
+## Real self-modification
+
+The evolution engine used to emit a *description* of a change — `{"file": "self_improve.py",
+"type": "router_boost"}` — that nothing consumed. A cycle could report `promoted` having
+modified zero source files: a CI pipeline gating an empty diff.
+
+`code_mutation.py` closes that. Vortex now proposes actual unified diffs, applies them to a
+disposable **copy** of the source tree, runs the full test suite and frozen eval *there*, and
+only then queues the diff for human approval.
+
+```
+weakness → diff → sandbox copy → 76 tests → frozen eval → security → governance → approval queue
+```
+
+```bash
+/selfmod MEMORY_CAP    # propose (verified, never applied)
+/pending               # review the queued diff
+/approve <id>          # the only path that writes to the working tree
+/rollback <id>         # restore from automatic backup
+```
+
+**What it cannot do — by construction:**
+
+| Guarantee | Mechanism |
+|---|---|
+| Can't edit its own tests | `tests/` is immutable |
+| Can't rewrite the gate it's judged by | `evals.py` is immutable |
+| Can't exempt itself | `code_mutation.py` is immutable |
+| Can't escape the backend dir | path traversal rejected |
+| Can't write dangerous code | added lines scanned for `os.system`, `exec`, network, file writes, restricted imports |
+| Can't self-apply | approval queue refuses any unverified diff; applying is a separate human action |
+| Can't leave a mess | every applied file is backed up first; `rollback` restores byte-identically |
+
+Verification runs in a subprocess with its own `VORTEX_HOME` and no LLM configured, so it
+stays deterministic. Note it is *slow* (~4 min): the sandbox copy has a cold `__pycache__`, so
+the suite runs far slower there than in the working tree.
+
+This is genuinely bounded, not general: it retunes bounded numeric constants deterministically,
+and with an LLM configured can author a real single-file edit. It cannot add new modules or
+build features on its own.
+
 ## Reference Inspirations (architecture borrowed, not wholesale merged)
 
 | Vortex capability | Reference repo | What we took |
@@ -278,7 +319,8 @@ cd vortex-agent/backend
 python -m pip install -r requirements.txt
 python main.py 8765          # API + full dashboard on http://0.0.0.0:8765
 python cli.py                # terminal swarm (new commands: /council /governance /sovereign /tools /memory /graph /orchestrate /benchmark /observability)
-python -m unittest discover tests -v
+python -m unittest discover tests -v          # 108 tests
+VORTEX_SLOW_TESTS=1 python -m unittest discover tests   # + full self-modification pipeline (~12 min)
 ```
 
 Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
@@ -326,6 +368,12 @@ Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 | POST | `/api/profile/remember` | persist durable fact (`kind`: fact/user) |
 | POST | `/api/profile/forget` | remove matching entries |
 | GET | `/api/skills/auto` | autonomously created skills |
+| GET | `/api/evolution/code` | pending self-modifications + protected files |
+| POST | `/api/evolution/code/propose` | propose a verified code diff (queued, not applied) |
+| GET | `/api/evolution/diff/{id}` | read a queued diff |
+| POST | `/api/evolution/approve/{id}` | apply to the working tree (human gate) |
+| POST | `/api/evolution/reject/{id}` | reject a queued diff |
+| POST | `/api/evolution/rollback/{id}` | restore from backup |
 | POST | `/api/resolution/resolve` | resolve candidates |
 | POST | `/api/rsi/eval/benchmark` | comprehensive benchmark |
 
@@ -347,7 +395,7 @@ vortex-agent/backend/
   main.py (FastAPI 0.4.0)
   cli.py
   static/index.html (full architecture dashboard)
-  tests/test_rsi.py + test_architecture.py + test_llm.py + test_hermes_features.py
+  tests/test_rsi.py + test_architecture.py + test_llm.py + test_hermes_features.py + test_code_mutation.py
 ```
 
 ## Implementation order completed

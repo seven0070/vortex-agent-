@@ -117,6 +117,68 @@ async def skills_auto():
         return {"error": "skill manager not loaded"}
     return agent.skill_manager.stats()
 
+@app.get("/api/evolution/code")
+async def evolution_code_status():
+    """Pending self-modifications + what is off-limits."""
+    if not agent.code_evolution:
+        return {"error": "code evolution not loaded"}
+    return agent.code_evolution.status()
+
+@app.post("/api/evolution/code/propose")
+async def evolution_code_propose(payload: dict = None):
+    """
+    Propose a code mutation: diff → sandbox → tests → frozen eval → security → governance.
+    Result is QUEUED, never applied. Approval is a separate call.
+    """
+    if not agent.code_evolution:
+        return {"error": "code evolution not loaded"}
+    payload = payload or {}
+    weakness = payload.get("weakness") or {
+        "type": payload.get("type", "tuning"),
+        "target": payload.get("target", "COMPLEXITY_TOOL_CALLS"),
+        "direction": payload.get("direction", "down"),
+        "description": payload.get("description", ""),
+        "file": payload.get("file"),
+    }
+    rec = agent.code_evolution.evolve_code(weakness, auto_apply=False)
+    # strip full sources from the response; the diff is the readable part
+    for d in rec.get("diffs", []):
+        d.pop("old_source", None)
+        d.pop("new_source", None)
+    return rec
+
+@app.post("/api/evolution/approve/{mutation_id}")
+async def evolution_approve(mutation_id: str, payload: dict = None):
+    """Human approval — the only path that writes to the working tree."""
+    if not agent.code_evolution:
+        return {"error": "code evolution not loaded"}
+    apply = (payload or {}).get("apply", True)
+    return agent.code_evolution.queue.approve(mutation_id, apply=apply)
+
+@app.post("/api/evolution/reject/{mutation_id}")
+async def evolution_reject(mutation_id: str, payload: dict = None):
+    if not agent.code_evolution:
+        return {"error": "code evolution not loaded"}
+    return agent.code_evolution.queue.reject(mutation_id, (payload or {}).get("reason", ""))
+
+@app.post("/api/evolution/rollback/{mutation_id}")
+async def evolution_rollback(mutation_id: str):
+    if not agent.code_evolution:
+        return {"error": "code evolution not loaded"}
+    return agent.code_evolution.queue.rollback(mutation_id)
+
+@app.get("/api/evolution/diff/{mutation_id}")
+async def evolution_diff(mutation_id: str):
+    if not agent.code_evolution:
+        return {"error": "code evolution not loaded"}
+    rec = agent.code_evolution.queue.get(mutation_id)
+    if not rec:
+        return {"error": "not found"}
+    return {"id": mutation_id, "state": rec.get("state"), "reason": rec.get("reason"),
+            "diffs": [{"path": d["path"], "rationale": d.get("rationale"),
+                       "unified": d.get("unified"), "stats": d.get("stats")}
+                      for d in rec.get("diffs", [])]}
+
 @app.get("/api/bots")
 async def bots():
     return agent.list_bots()

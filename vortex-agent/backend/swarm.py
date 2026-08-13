@@ -470,6 +470,8 @@ class VortexAgent:
         except Exception as e:
             print(f"[agent] skill manager not loaded: {e}")
 
+        self.code_evolution = None
+
         # ── new layers (import lazily to avoid circular) ──
         self.governance = None
         self.sovereign = None
@@ -515,6 +517,12 @@ class VortexAgent:
             self.tool_registry = get_registry(governance=self.governance)
         except Exception as e:
             print(f"[agent] tool registry not loaded: {e}")
+
+        try:
+            from code_evo_init import init_code_evolution
+            init_code_evolution(self)
+        except Exception as e:
+            print(f"[agent] code evolution not loaded: {e}")
 
         try:
             from orchestration import StateManager, create_default_graph

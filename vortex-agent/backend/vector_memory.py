@@ -13,7 +13,17 @@ class LocalVectorStore:
     """Tiny TF-IDF cosine store, persisted to JSON. Zero dependencies."""
     def __init__(self, path):
         self.path = path
-        self.docs = json.loads(path.read_text()) if path.exists() else []
+        # A truncated or empty vectors.json (interrupted write, crashed process,
+        # concurrent runs) used to raise JSONDecodeError and take down agent
+        # startup entirely. A corrupt cache should degrade to an empty cache.
+        self.docs = []
+        if path.exists():
+            try:
+                loaded = json.loads(path.read_text() or "[]")
+                if isinstance(loaded, list):
+                    self.docs = loaded
+            except (json.JSONDecodeError, OSError):
+                self.docs = []
 
     def add(self, text, meta):
         self.docs.append({"text": text, "meta": meta})

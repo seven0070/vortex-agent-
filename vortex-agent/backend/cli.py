@@ -50,6 +50,10 @@ def main():
                 "  /profile               MEMORY.md + USER.md (always-on context)\n"
                 "  /remember <fact>       persist a durable fact\n"
                 "  /autoskills            skills the agent wrote itself\n"
+                "  /selfmod [target]      propose a verified code mutation\n"
+                "  /pending               review queued self-modifications\n"
+                "  /approve <id>          apply a verified mutation\n"
+                "  /rollback <id>         undo an applied mutation\n"
                 "  anything else          chief orchestrates (add 'orchestrate:' prefix for full graph)"
             )
             continue
@@ -248,6 +252,56 @@ def main():
                   f"total={st['total_skills']}")
             for s in st["tracked"]:
                 print(f"   {s['name']:<28} uses={s['uses']} success={s['success_rate']}")
+            continue
+
+        if msg.startswith("/selfmod"):
+            ce = agent.code_evolution
+            if not ce:
+                print("  code evolution not loaded")
+                continue
+            target = msg[len("/selfmod"):].strip() or "COMPLEXITY_TOOL_CALLS"
+            print(f"  proposing mutation for '{target}' (sandbox + 76 tests + frozen eval)...")
+            r = ce.evolve_code({"type": "tuning", "target": target, "direction": "up"})
+            print(f"  decision: {r['decision']}")
+            print(f"  reason  : {r.get('reason')}")
+            for d in r.get("diffs", []):
+                print(f"\n{d['unified']}")
+            if r.get("verified"):
+                pend = ce.queue.list_pending()
+                if pend:
+                    print(f"  queued as {pend[-1]['id']} — /approve {pend[-1]['id']} to apply")
+            continue
+
+        if msg == "/pending":
+            ce = agent.code_evolution
+            if not ce:
+                print("  code evolution not loaded")
+                continue
+            pend = ce.queue.list_pending()
+            if not pend:
+                print("  (no pending mutations)")
+            for p in pend:
+                print(f"   {p['id']}  {p.get('reason','')}")
+                for s in p.get("summary", []):
+                    print(f"      {s}")
+            continue
+
+        if msg.startswith("/approve"):
+            ce = agent.code_evolution
+            mid = msg[len("/approve"):].strip()
+            if not ce or not mid:
+                print("  usage: /approve <id>")
+                continue
+            print(f"  {ce.queue.approve(mid, apply=True)}")
+            continue
+
+        if msg.startswith("/rollback"):
+            ce = agent.code_evolution
+            mid = msg[len("/rollback"):].strip()
+            if not ce or not mid:
+                print("  usage: /rollback <id>")
+                continue
+            print(f"  {ce.queue.rollback(mid)}")
             continue
 
         # direct-bot addressing
