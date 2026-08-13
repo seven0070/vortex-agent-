@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/blackhole.png" alt="Vortex Agent" width="100%">
+</p>
+
 # Vortex Agent — Full Architecture 0.4.0
 
 A local swarm agent with **rapid self-improvement + Ultron-style evolution** — it rescues a miss in the same turn, stores the lesson in a **knowledge graph + vector memory**, and only keeps mutations that raise a frozen eval score.
