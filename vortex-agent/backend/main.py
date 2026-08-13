@@ -54,7 +54,14 @@ async def health():
         "council_members": list(agent.council.members.keys()) if agent.council else [],
         "governance_policies": len(agent.governance.policy.policies) if agent.governance else 0,
         "sovereign_mode": agent.sovereign.state.snapshot().get("mode") if agent.sovereign else "unknown",
+        "llm": __import__("llm").get_llm().status(),
     }
+
+@app.get("/api/llm")
+async def llm_status():
+    """Phase 3: which model is wired in, and is it actually being used."""
+    from llm import get_llm
+    return get_llm().status()
 
 @app.get("/api/bots")
 async def bots():

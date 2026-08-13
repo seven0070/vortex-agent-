@@ -173,6 +173,22 @@ class VortexCouncil:
         # try delegate to underlying bot
         prompt = f"[{role}] {ROLE_PROMPTS.get(role, '')}\nGoal: {goal}\nProposal: {proposal}\nAnalyze independently."
 
+        # Phase 3: a genuine independent position from a real model, when configured.
+        try:
+            from reasoning import llm_council_analysis
+            smart = llm_council_analysis(role, ROLE_PROMPTS.get(role, ""), goal, proposal, candidates)
+            if smart:
+                return {
+                    "role": role,
+                    "analysis": smart["analysis"],
+                    "evidence": smart["evidence"],
+                    "confidence": smart["confidence"],
+                    "weight": self.members[role].weight,
+                    "source": "llm",
+                }
+        except Exception:
+            pass
+
         if self.agent and hasattr(self.agent, 'bots'):
             bot_name = self.members[role].bot_name
             if bot_name in self.agent.bots:

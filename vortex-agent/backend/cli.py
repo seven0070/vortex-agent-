@@ -44,6 +44,7 @@ def main():
                 "  /orchestrate <goal>    run full orchestration graph\n"
                 "  /benchmark             Vortex comprehensive benchmark\n"
                 "  /observability         traces + metrics\n"
+                "  /llm                   LLM provider status (Phase 3)\n"
                 "  anything else          chief orchestrates (add 'orchestrate:' prefix for full graph)"
             )
             continue
@@ -177,6 +178,19 @@ def main():
                 print(f"  traces: {agent.observability.tracer.list_recent(3)}")
             else:
                 print("  observability not loaded")
+            continue
+
+        if msg == "/llm":
+            from llm import get_llm
+            st = get_llm().status()
+            for k, v in st.items():
+                print(f"  {k:16} {v}")
+            if not st["available"]:
+                print("\n  No provider configured — running deterministic tool mode.")
+                print("  Enable live reasoning:")
+                print("    export VORTEX_LLM_PROVIDER=openai   # or anthropic / ollama")
+                print("    export VORTEX_LLM_API_KEY=sk-...")
+                print("    export VORTEX_LLM_MODEL=gpt-4o-mini")
             continue
 
         # direct-bot addressing

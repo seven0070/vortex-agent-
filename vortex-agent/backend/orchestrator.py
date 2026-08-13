@@ -123,5 +123,14 @@ class VortexPrime:
                     "  /run <code>            — sandboxed Python")
         if "hello" in low or "hi" in low:
             return "🌪️ Hello. The core brain is online. Try /help."
-        return ("🌪️ Understood. I don't have a live LLM wired yet (that's Phase 3), "
-                "but my tools are ready — try /help.")
+        # Phase 3: answer for real when a model is configured.
+        try:
+            from reasoning import llm_role_reply
+            smart = llm_role_reply("general", "vortex", message)
+            if smart:
+                return smart
+        except Exception:
+            pass
+        return ("🌪️ Understood. No LLM provider is configured, so I'm running in "
+                "deterministic tool mode — set VORTEX_LLM_PROVIDER + an API key to enable "
+                "live reasoning. My tools are ready — try /help.")

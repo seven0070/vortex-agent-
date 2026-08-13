@@ -94,8 +94,9 @@ class VortexBot:
         elif self.role == "improve":
             reply = self._improve(message)
         else:
-            route = self._route(message)
-            source = "builtin"
+            self._route_source = None
+            route = self._route(message, ctx)
+            source = self._route_source or "builtin"
             if not route:
                 learned = self.agent.rsi.suggest_route(message, self.role)
                 if learned:
@@ -201,6 +202,27 @@ class VortexBot:
 
         plan = self._plan(message)
         if not plan:
+            # Phase 3: chief reasons for real before falling back to the greeting.
+            # This is the main entry point (/api/chat + CLI), so a canned answer here
+            # was the most visible symptom of the missing brain.
+            try:
+                from reasoning import llm_route, llm_role_reply
+                route = llm_route(message, "general")
+                if route:
+                    tool_name, args = route
+                    result = self._call(tool_name, args)
+                    if result.status == "error":
+                        retry = self.agent.rsi.retry_tool(tool_name, args, result.message)
+                        if retry:
+                            result, _ = retry
+                    self._last = {"tool": tool_name, "status": result.status, "route": "llm"}
+                    return f"🧬 reasoned route → {tool_name}\n" + self._format(tool_name, result)
+                smart = llm_role_reply("general", "vortex", message)
+                if smart:
+                    return smart
+            except Exception:
+                pass
+
             # check sovereign objectives for context
             sov_ctx = ""
             try:
@@ -298,11 +320,21 @@ class VortexBot:
                 "Try: eval benchmark / council / governance / sovereign")
 
     # ── specialist routing ──
-    def _route(self, msg):
+    def _route(self, msg, ctx=None):
         low = msg.lower()
         code = _extract_code(msg)
         if code:
             return "codeforge", {"code": code}
+
+        # Phase 3: semantic routing via LLM (no-op when unconfigured)
+        try:
+            from reasoning import llm_route
+            smart = llm_route(msg, self.role, ctx)
+            if smart:
+                self._route_source = "llm"
+                return smart
+        except Exception:
+            pass
 
         if self.role == "coding":
             learned = self.agent.rsi.suggest_route(msg, self.role)
@@ -343,6 +375,15 @@ class VortexBot:
         return None
 
     def _role_reply(self, message, ctx):
+        # Phase 3: real reasoning when a model is configured; templates otherwise.
+        try:
+            from reasoning import llm_role_reply
+            smart = llm_role_reply(self.role, self.name, message, ctx)
+            if smart:
+                return smart
+        except Exception:
+            pass
+
         ctx_txt = "\n".join(f"   • {c[:100]}" for c in ctx) if ctx else ""
         if self.role == "research":
             return (f"🔍 Researcher findings on '{message[:50]}':\n"

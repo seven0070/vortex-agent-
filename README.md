@@ -8,7 +8,29 @@ observe → rescue → reflect → mutate → eval → promote (or revert)
      Evolution Engine: Observe → Weakness → Hypothesis → Candidate → Sandbox → Tests → Benchmarks → Security → Compare → Canary → Deploy → Monitor → Rollback
 ```
 
-No live LLM required. Tools run sandboxed; RSI + Evolution sit on top as the learning loop.
+Tools run sandboxed; RSI + Evolution sit on top as the learning loop.
+
+**Phase 3 — the brain is wired.** Plug in any model (OpenAI-compatible, Anthropic, or a local
+Ollama) and Vortex uses it for three things: semantic tool routing, specialist replies, and
+independent council positions. With no provider configured it runs exactly as before —
+deterministic keyword routing and templates — so the frozen eval stays reproducible.
+
+```bash
+export VORTEX_LLM_PROVIDER=openai      # openai | anthropic | ollama
+export VORTEX_LLM_API_KEY=sk-...
+export VORTEX_LLM_MODEL=gpt-4o-mini
+```
+
+| | No provider (default) | Provider configured |
+|---|---|---|
+| Tool routing | keyword/regex matching | model picks the tool + writes the code |
+| Specialist replies | f-string templates | the model reasons in role |
+| Council analyses | heuristics per role | genuinely independent positions |
+| Frozen eval suite | 7/7 (1.0) | unchanged — LLM never gates promotion |
+
+Check what's active with `/llm` in the CLI or `GET /api/llm`. The layer is stdlib-only (no new
+dependencies) and fails soft: if the provider errors or times out, Vortex degrades to the
+deterministic path instead of crashing.
 
 ## Reference Inspirations (architecture borrowed, not wholesale merged)
 
@@ -234,6 +256,7 @@ Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 /orchestrate <goal>    run full orchestration graph
 /benchmark             Vortex comprehensive benchmark
 /observability         traces + metrics
+/llm                   LLM provider status (Phase 3)
 ```
 
 ### HTTP new endpoints
@@ -255,6 +278,7 @@ Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 | GET | `/api/orchestration` | recent states |
 | POST | `/api/orchestration/run` | run graph |
 | GET | `/api/observability` | traces + metrics |
+| GET | `/api/llm` | LLM provider status (Phase 3) |
 | POST | `/api/resolution/resolve` | resolve candidates |
 | POST | `/api/rsi/eval/benchmark` | comprehensive benchmark |
 
@@ -276,7 +300,7 @@ vortex-agent/backend/
   main.py (FastAPI 0.4.0)
   cli.py
   static/index.html (full architecture dashboard)
-  tests/test_rsi.py + test_architecture.py
+  tests/test_rsi.py + test_architecture.py + test_llm.py
 ```
 
 ## Implementation order completed
