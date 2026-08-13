@@ -55,6 +55,7 @@ Every improvement gets:
 """
 from __future__ import annotations
 
+import ast
 import json
 import re
 import time
@@ -111,7 +112,65 @@ def tokenize(text: str):
     return [t for t in re.findall(r"[a-z0-9]+", (text or "").lower()) if t not in STOP and len(t) > 1]
 
 
+# Word operators (multi-word first) translated into symbols for chained math.
+_WORD_OPS = [
+    (re.compile(r"\bmultiplied\s+by\b", re.I), "*"),
+    (re.compile(r"\bdivided\s+by\b", re.I), "/"),
+    (re.compile(r"\badded\s+to\b", re.I), "+"),
+    (re.compile(r"\bsubtracted\s+by\b", re.I), "-"),
+    (re.compile(r"\btimes\b", re.I), "*"),
+    (re.compile(r"\bplus\b", re.I), "+"),
+    (re.compile(r"\bminus\b", re.I), "-"),
+    (re.compile(r"\bover\b", re.I), "/"),
+    (re.compile(r"\bx\b", re.I), "*"),
+]
+
+# A run of one or more arithmetic operations: 15 * 3 + 5, 100 / 4, etc.
+_ARITH_RE = re.compile(r"[-+]?\d+(?:\.\d+)?(?:\s*[+\-*/]\s*[-+]?\d+(?:\.\d+)?)+")
+
+# Only allow a pure arithmetic expression (no calls, names, attributes, ...).
+_SAFE_AST_NODES = (
+    ast.Expression, ast.BinOp, ast.UnaryOp,
+    ast.Add, ast.Sub, ast.Mult, ast.Div,
+    ast.USub, ast.UAdd, ast.Constant,
+)
+
+
+def _extract_arithmetic(msg: str) -> Optional[str]:
+    """Translate natural-language operators to symbols and extract a validated
+    arithmetic expression, supporting chained operations like "15 times 3 plus 5"."""
+    if not msg:
+        return None
+    s = msg.lower()
+    replaced = False
+    for rx, op in _WORD_OPS:
+        s, n = rx.subn(op, s)
+        if n:
+            replaced = True
+    if not replaced:
+        return None
+    m = _ARITH_RE.search(s)
+    if not m:
+        return None
+    expr = m.group(0).strip()
+    try:
+        tree = ast.parse(expr, mode="eval")
+    except Exception:
+        return None
+    for node in ast.walk(tree):
+        if not isinstance(node, _SAFE_AST_NODES):
+            return None
+    return expr
+
+
 def compile_math(msg: str) -> Optional[str]:
+    if not msg:
+        return None
+    # Fast path: full arithmetic chain (e.g. "what is 15 times 3 plus 5").
+    expr = _extract_arithmetic(msg)
+    if expr:
+        return f"print({expr})"
+    # Fallback: original single-operator patterns for exact backward compatibility.
     for rx, op in MATH_PATTERNS:
         m = rx.search(msg)
         if m:
