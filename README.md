@@ -221,6 +221,44 @@ python -m unittest discover tests -v
 
 Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 
+## Desktop app (PyQt6, Windows native)
+
+The repository now includes a desktop client at `vortex-agent/desktop/` that connects to the same FastAPI backend (`vortex-agent/backend/main.py`) used by the web dashboard.
+
+### Features
+
+- Real-time chat + memory recall
+- Dashboard with health/stats/observability telemetry
+- Knowledge graph viewer
+- Council deliberation viewer
+- Governance + policy evaluation panel
+- Tool execution monitor
+- Orchestration run/history visualizer
+- Audit trail + logs viewer (filterable)
+- Benchmark runner
+- Settings panel with connection status indicator
+- System tray integration
+- Local backend auto-start (or connect to remote backend)
+
+### Run desktop client
+
+```bash
+cd vortex-agent/desktop
+python -m pip install -r requirements.txt
+python main.py
+```
+
+By default the desktop app tries `http://127.0.0.1:8765` and auto-starts the local backend when enabled in settings.
+
+### Build Windows executable
+
+From Windows 10/11:
+
+```bat
+cd vortex-agent\desktop
+build_windows.bat
+```
+
 ### CLI new commands
 
 ```
@@ -277,6 +315,11 @@ vortex-agent/backend/
   cli.py
   static/index.html (full architecture dashboard)
   tests/test_rsi.py + test_architecture.py
+vortex-agent/desktop/
+  main.py (PyQt6 desktop entry)
+  api_client.py + backend_manager.py + config.py
+  ui/main_window.py
+  requirements.txt + build_windows.bat
 ```
 
 ## Implementation order completed
