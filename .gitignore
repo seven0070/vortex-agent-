@@ -1,16 +1,19 @@
-```
 # Dependencies
 venv/
 .venv/
+
+# Python cache
 __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.Python
+*.so
+*.egg-info/
 
 # Build artifacts
 build/
 dist/
-*.egg-info/
 
 # Environment files
 .env
@@ -32,12 +35,8 @@ dist/
 coverage/
 htmlcov/
 
-# Python cache
-*.pyc
-__pycache__/
-*.pyo
-*.pyd
-.Python
-*.so
-*.egg-info/
-```
+# Runtime data
+.vortex/
+*.db
+*.db-wal
+*.db-shm
