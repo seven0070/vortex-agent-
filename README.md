@@ -221,6 +221,22 @@ python -m unittest discover tests -v
 
 Override data dir with `VORTEX_HOME=/tmp/vortex-dev`.
 
+## Desktop app (Tauri + React)
+
+A Tauri + React desktop workspace is available in `/desktop` as a native frontend layer over the existing Vortex backend on `http://127.0.0.1:8765`.
+
+```bash
+cd desktop
+npm install
+npm run tauri:dev
+```
+
+To create native packages:
+
+```bash
+npm run tauri:build
+```
+
 ### CLI new commands
 
 ```

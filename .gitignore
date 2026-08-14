@@ -41,3 +41,9 @@ __pycache__/
 *.so
 *.egg-info/
 ```
+
+# Desktop (Tauri + React)
+desktop/node_modules/
+desktop/dist/
+desktop/release/
+desktop/*.log
