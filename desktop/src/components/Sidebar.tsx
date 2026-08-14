@@ -1,74 +1,39 @@
-import { Brain, FolderTree, History, Sparkles } from 'lucide-react';
+import type { VortexRoute } from '../types/models';
 
-export type SidebarTab = 'files' | 'skills' | 'memory';
-
-type SidebarProps = {
-  activeTab: SidebarTab;
-  onTabChange: (tab: SidebarTab) => void;
-  files: string[];
-  skills: string[];
-  memories: string[];
+type Props = {
+  route: VortexRoute;
+  onRoute: (route: VortexRoute) => void;
 };
 
-const tabs: Array<{ key: SidebarTab; label: string; icon: React.ComponentType<{ className?: string }> }> = [
-  { key: 'files', label: 'Files', icon: FolderTree },
-  { key: 'skills', label: 'Skills', icon: Sparkles },
-  { key: 'memory', label: 'Memory', icon: Brain },
+const links: Array<{ label: string; route: VortexRoute }> = [
+  { label: 'New Task', route: 'chat' },
+  { label: 'Chat', route: 'chat' },
+  { label: 'Missions', route: 'missions' },
+  { label: 'Council', route: 'council' },
+  { label: 'Resolution', route: 'resolution' },
+  { label: 'Memory', route: 'memory' },
+  { label: 'Knowledge', route: 'knowledge' },
+  { label: 'Tools', route: 'tools' },
+  { label: 'Governance', route: 'governance' },
+  { label: 'Sovereign', route: 'sovereign' },
+  { label: 'Evolution', route: 'evolution' },
+  { label: 'Benchmarks', route: 'benchmarks' },
+  { label: 'Settings', route: 'settings' },
 ];
 
-export default function Sidebar({ activeTab, onTabChange, files, skills, memories }: SidebarProps) {
+export function Sidebar({ route, onRoute }: Props) {
   return (
-    <aside className="flex h-full w-full flex-col border-r border-zinc-800 bg-zinc-950">
-      <div className="border-b border-zinc-800 px-4 py-3 text-sm font-semibold text-zinc-200">Workspace</div>
-      <div className="grid grid-cols-3 gap-1 p-2">
-        {tabs.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => onTabChange(key)}
-            className={`flex items-center justify-center gap-2 rounded-md px-2 py-2 text-xs transition ${
-              activeTab === key ? 'bg-indigo-500/20 text-indigo-300' : 'text-zinc-400 hover:bg-zinc-900 hover:text-zinc-200'
-            }`}
-          >
-            <Icon className="h-4 w-4" />
-            {label}
-          </button>
-        ))}
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto p-3 text-xs text-zinc-300">
-        {activeTab === 'files' && (
-          <ul className="space-y-2">
-            {files.map((file) => (
-              <li key={file} className="rounded border border-zinc-800 bg-zinc-900/40 p-2">
-                {file}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {activeTab === 'skills' && (
-          <ul className="space-y-2">
-            {skills.length === 0 && <li className="text-zinc-500">No skills loaded yet.</li>}
-            {skills.map((skill) => (
-              <li key={skill} className="rounded border border-zinc-800 bg-zinc-900/40 p-2">
-                {skill}
-              </li>
-            ))}
-          </ul>
-        )}
-
-        {activeTab === 'memory' && (
-          <ul className="space-y-2">
-            {memories.length === 0 && <li className="text-zinc-500">No recent memory yet.</li>}
-            {memories.map((memory, index) => (
-              <li key={`${memory}-${index}`} className="rounded border border-zinc-800 bg-zinc-900/40 p-2">
-                <History className="mr-2 inline h-3.5 w-3.5 text-zinc-500" />
-                {memory}
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
+    <aside className="sidebar">
+      {links.map((link) => (
+        <button
+          key={`${link.label}-${link.route}`}
+          className={`sidebar-link ${route === link.route ? 'active' : ''}`}
+          onClick={() => onRoute(link.route)}
+          type="button"
+        >
+          {link.label}
+        </button>
+      ))}
     </aside>
   );
 }

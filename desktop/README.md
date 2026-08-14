@@ -1,45 +1,44 @@
-# Vortex Agent Desktop (Electron + React)
+# Vortex Desktop (Tauri 2 + React + TypeScript)
 
-Professional 3-pane desktop workspace for local Vortex Agent usage on Windows.
+Vortex Desktop is a native shell UI layer over the existing `vortex-agent/backend` runtime.
 
-## Features
+## Architecture
 
-- **Left pane**: sidebar tabs for Files, Skills, and Memory
-- **Middle pane**: code/diff viewer with **Accept/Reject** actions and floating command bar
-- **Right pane**: live tool execution stream with command status + output
-- Electron main process auto-starts `vortex-agent/backend/main.py` on port **8000**
-- Graceful backend shutdown when Electron exits
-- Works in development and production packaging modes
+- **Frontend:** React + TypeScript (`desktop/src`)
+- **Native shell:** Tauri 2 (`desktop/src-tauri`)
+- **Backend:** Python FastAPI in `vortex-agent/backend`
+- **Connection:** local HTTP API (`127.0.0.1:8765`) started/stopped by Tauri lifecycle
 
-## Setup
+## Screens
 
-From repository root:
-
-```bash
-cd desktop
-npm install --legacy-peer-deps
-```
+- Shell (window, sidebar, top bar, theme, route state)
+- Chat
+- Missions
+- Council / Resolution / Memory / Knowledge Graph
+- Governance / Sovereign / Tools
+- Evolution
+- Benchmarks / Observability
+- Settings
 
 ## Development
 
 ```bash
-npm run electron:dev
+cd desktop
+npm install
+npm run tauri:dev
 ```
 
-This starts:
-
-- Vite dev server for React hot reload
-- TypeScript watch for Electron main/preload files
-- Electron desktop shell
-
-## Production Build (Windows)
+## Frontend build validation
 
 ```bash
+npm run typecheck
 npm run build
 ```
 
-Build artifacts are created under `desktop/release/` and include a Windows installer (`.exe`) via `electron-builder`.
+## Native packaging
 
-## Backend Packaging Notes
+```bash
+npm run tauri:build
+```
 
-`electron-builder.yml` includes `../vortex-agent/backend` under `extraResources`. If you bundle a PyInstaller executable later (for example `main.exe`), Electron will automatically prefer it over `main.py` in packaged mode.
+The Tauri bundle includes backend resources from `../vortex-agent/backend/**`.

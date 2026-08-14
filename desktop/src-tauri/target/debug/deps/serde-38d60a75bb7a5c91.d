@@ -1,0 +1,14 @@
+/home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/deps/serde-38d60a75bb7a5c91.d: /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/build/serde-26c1ce068bd8afa2/out/private.rs
+
+/home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/deps/libserde-38d60a75bb7a5c91.rlib: /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/build/serde-26c1ce068bd8afa2/out/private.rs
+
+/home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/deps/libserde-38d60a75bb7a5c91.rmeta: /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs /home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs /home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/build/serde-26c1ce068bd8afa2/out/private.rs
+
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/lib.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/integer128.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/mod.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/de.rs:
+/home/runner/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/serde-1.0.229/src/private/ser.rs:
+/home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/build/serde-26c1ce068bd8afa2/out/private.rs:
+
+# env-dep:OUT_DIR=/home/runner/work/vortex-agent-/vortex-agent-/desktop/src-tauri/target/debug/build/serde-26c1ce068bd8afa2/out
