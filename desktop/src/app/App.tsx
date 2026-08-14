@@ -1,5 +1,4 @@
-import React from 'react';
-import { useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { AppLayout } from '../layouts/AppLayout';
 import { ChatPage } from '../pages/ChatPage';
 import { MissionsPage } from '../pages/MissionsPage';
@@ -60,6 +59,7 @@ export function App() {
     case 'settings':
       page = <SettingsPage />;
       break;
+    case 'new-task':
     case 'chat':
     default:
       page = <ChatPage />;

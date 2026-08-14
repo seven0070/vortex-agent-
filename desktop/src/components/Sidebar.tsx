@@ -6,7 +6,7 @@ type Props = {
 };
 
 const links: Array<{ label: string; route: VortexRoute }> = [
-  { label: 'New Task', route: 'chat' },
+  { label: 'New Task', route: 'new-task' },
   { label: 'Chat', route: 'chat' },
   { label: 'Missions', route: 'missions' },
   { label: 'Council', route: 'council' },

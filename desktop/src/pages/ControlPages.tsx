@@ -1,12 +1,9 @@
 import { useMemo, useState } from 'react';
+import { JsonView } from '../components/JsonView';
 import { Panel } from '../components/Panel';
 import { usePolling } from '../hooks/usePolling';
 import { createApi } from '../services/api';
 import { useAppStore } from '../stores/AppStore';
-
-function JsonView({ value }: { value: unknown }) {
-  return <pre className="json-view">{JSON.stringify(value, null, 2)}</pre>;
-}
 
 export function GovernancePage() {
   const { backendPort } = useAppStore();

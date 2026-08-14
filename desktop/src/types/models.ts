@@ -1,16 +1,20 @@
-export type VortexRoute =
-  | 'chat'
-  | 'missions'
-  | 'council'
-  | 'resolution'
-  | 'memory'
-  | 'knowledge'
-  | 'governance'
-  | 'sovereign'
-  | 'tools'
-  | 'evolution'
-  | 'benchmarks'
-  | 'settings';
+export const VORTEX_ROUTES = [
+  'new-task',
+  'chat',
+  'missions',
+  'council',
+  'resolution',
+  'memory',
+  'knowledge',
+  'governance',
+  'sovereign',
+  'tools',
+  'evolution',
+  'benchmarks',
+  'settings',
+] as const;
+
+export type VortexRoute = (typeof VORTEX_ROUTES)[number];
 
 export type AppTheme = 'dark' | 'light';
 

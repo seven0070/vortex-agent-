@@ -10,6 +10,18 @@ struct BackendState {
     child: Mutex<Option<Child>>,
 }
 
+impl Drop for BackendState {
+    fn drop(&mut self) {
+        if let Ok(mut lock) = self.child.lock() {
+            if let Some(child) = lock.as_mut() {
+                let _ = child.kill();
+                let _ = child.wait();
+            }
+            *lock = None;
+        }
+    }
+}
+
 #[derive(Serialize)]
 struct LifecycleSnapshot {
     backend_running: bool,
@@ -50,26 +62,26 @@ fn spawn_backend(app: &AppHandle, state: &State<BackendState>) {
     {
         Command::new(target)
             .env("PORT", BACKEND_PORT.to_string())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit())
             .spawn()
             .ok()
     } else {
         let mut command = Command::new("python3");
         command
-            .arg(target)
+            .arg(target.clone())
             .arg(BACKEND_PORT.to_string())
             .env("PORT", BACKEND_PORT.to_string())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null());
+            .stdout(Stdio::inherit())
+            .stderr(Stdio::inherit());
 
         command.spawn().ok().or_else(|| {
             Command::new("python")
                 .arg(target)
                 .arg(BACKEND_PORT.to_string())
                 .env("PORT", BACKEND_PORT.to_string())
-                .stdout(Stdio::null())
-                .stderr(Stdio::null())
+                .stdout(Stdio::inherit())
+                .stderr(Stdio::inherit())
                 .spawn()
                 .ok()
         })
@@ -86,6 +98,7 @@ fn stop_backend(state: &State<BackendState>) {
     if let Ok(mut lock) = state.child.lock() {
         if let Some(child) = lock.as_mut() {
             let _ = child.kill();
+            let _ = child.wait();
         }
         *lock = None;
     }

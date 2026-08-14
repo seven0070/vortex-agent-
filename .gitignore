@@ -42,9 +42,8 @@ __pycache__/
 *.egg-info/
 ```
 
-# Desktop (Electron + React)
+# Desktop (Tauri + React)
 desktop/node_modules/
 desktop/dist/
-desktop/dist-electron/
 desktop/release/
 desktop/*.log

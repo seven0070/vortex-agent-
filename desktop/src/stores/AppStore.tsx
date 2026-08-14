@@ -1,6 +1,6 @@
 import { invoke } from '@tauri-apps/api/core';
 import React, { createContext, useContext, useEffect, useMemo, useReducer } from 'react';
-import type { AppTheme, VortexRoute } from '../types/models';
+import { VORTEX_ROUTES, type AppTheme, type VortexRoute } from '../types/models';
 
 type State = {
   route: VortexRoute;
@@ -18,7 +18,7 @@ type Action =
   | { type: 'backend'; running: boolean };
 
 const initialState: State = {
-  route: 'chat',
+  route: 'new-task',
   theme: 'dark',
   backendPort: 8765,
   online: false,
@@ -27,21 +27,7 @@ const initialState: State = {
 
 function parseRoute(hash: string): VortexRoute {
   const candidate = hash.replace('#/', '') as VortexRoute;
-  const routes: VortexRoute[] = [
-    'chat',
-    'missions',
-    'council',
-    'resolution',
-    'memory',
-    'knowledge',
-    'governance',
-    'sovereign',
-    'tools',
-    'evolution',
-    'benchmarks',
-    'settings',
-  ];
-  return routes.includes(candidate) ? candidate : 'chat';
+  return VORTEX_ROUTES.includes(candidate) ? candidate : 'new-task';
 }
 
 function reducer(state: State, action: Action): State {
@@ -101,7 +87,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       ...state,
       setRoute: (route) => {
         window.location.hash = `/${route}`;
-        dispatch({ type: 'route', route });
       },
       toggleTheme: () => dispatch({ type: 'theme', theme: state.theme === 'dark' ? 'light' : 'dark' }),
       setOnline: (online) => dispatch({ type: 'online', online }),
