@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
@@ -90,12 +90,12 @@ async def chat(req: ChatRequest):
 
 @app.post("/api/chat/stream")
 async def chat_stream(req: ChatRequest):
-    if req.orchestrated and agent.graph:
-        reply = agent.run_orchestrated(req.message, original_message=req.message)
-    else:
-        reply = agent.chat(req.message)
-
     async def stream():
+        yield f"{json.dumps({'type': 'status', 'delta': 'starting'})}\n"
+        if req.orchestrated and agent.graph:
+            reply = await asyncio.to_thread(agent.run_orchestrated, req.message, original_message=req.message)
+        else:
+            reply = await asyncio.to_thread(agent.chat, req.message)
         chunk_size = 24
         text = str(reply)
         for i in range(0, len(text), chunk_size):
@@ -288,7 +288,10 @@ async def resolution_resolve(req: ResolveRequest):
     return agent.resolver.resolve(candidates, goal=req.goal)
 
 @app.post("/api/runtime/shutdown")
-async def runtime_shutdown():
+async def runtime_shutdown(request: Request):
+    client_host = request.client.host if request.client else ""
+    if client_host not in {"127.0.0.1", "::1", "::ffff:127.0.0.1"}:
+        raise HTTPException(status_code=403, detail="shutdown is local-only")
     loop = asyncio.get_running_loop()
     loop.call_later(0.2, lambda: os.kill(os.getpid(), signal.SIGTERM))
     return {"status": "shutting_down"}

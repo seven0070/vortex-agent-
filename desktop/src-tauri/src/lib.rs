@@ -45,6 +45,8 @@ fn backend_candidates(app: &AppHandle) -> Vec<PathBuf> {
     if let Ok(resource) = app.path().resource_dir() {
         candidates.push(resource.join("vortex-backend/main.py"));
         candidates.push(resource.join("vortex-backend/main.exe"));
+        candidates.push(resource.join("vortex-agent/backend/main.py"));
+        candidates.push(resource.join("vortex-agent/backend/main.exe"));
     }
 
     candidates
@@ -149,14 +151,15 @@ fn stop_backend_internal(state: &State<BackendState>) {
     let _ = request_shutdown();
     thread::sleep(Duration::from_millis(200));
 
+    for _ in 0..16 {
+        if !running_child(state) {
+            break;
+        }
+        thread::sleep(Duration::from_millis(250));
+    }
+
     if let Ok(mut lock) = state.child.lock() {
         if let Some(child) = lock.as_mut() {
-            for _ in 0..16 {
-                if child.try_wait().ok().flatten().is_some() {
-                    break;
-                }
-                thread::sleep(Duration::from_millis(250));
-            }
             if child.try_wait().ok().flatten().is_none() {
                 let _ = child.kill();
                 let _ = child.wait();
@@ -224,8 +227,11 @@ pub fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                let state: State<BackendState> = window.state();
-                stop_backend_internal(&state);
+                let app = window.app_handle().clone();
+                thread::spawn(move || {
+                    let state: State<BackendState> = app.state();
+                    stop_backend_internal(&state);
+                });
             }
         })
         .run(tauri::generate_context!())

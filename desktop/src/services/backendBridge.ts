@@ -55,7 +55,12 @@ async function streamRequest(url: string, body: unknown, onDelta: (delta: string
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
-      const event = JSON.parse(trimmed) as StreamEvent;
+      let event: StreamEvent;
+      try {
+        event = JSON.parse(trimmed) as StreamEvent;
+      } catch {
+        throw new Error('Received malformed stream payload');
+      }
       if (event.type === 'chunk' && event.delta) onDelta(event.delta);
       if (event.type === 'error') throw new Error(event.delta ?? 'Stream failed');
     }

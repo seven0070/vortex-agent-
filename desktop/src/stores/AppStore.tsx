@@ -66,10 +66,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   });
 
   useEffect(() => {
-    invoke<number>('get_backend_port')
-      .then((port) => dispatch({ type: 'port', port }))
-      .catch(() => undefined);
-
     invoke<{ backend_running: boolean; backend_port: number; last_error?: string | null }>('lifecycle_snapshot')
       .then((snapshot) => {
         dispatch({ type: 'port', port: snapshot.backend_port || 8765 });
