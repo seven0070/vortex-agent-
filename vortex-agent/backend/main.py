@@ -1,4 +1,8 @@
 """Vortex Agent — Phase 4 API + RSI + Council + Sovereign + Governance + Observability + Orchestration dashboard."""
+import asyncio
+import json
+import os
+import signal
 import sys
 from contextlib import asynccontextmanager
 from pathlib import Path
@@ -6,7 +10,7 @@ from pathlib import Path
 import uvicorn
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel
 
 from memory import Memory
@@ -83,6 +87,24 @@ async def chat(req: ChatRequest):
         },
         "orchestrated": req.orchestrated,
     }
+
+@app.post("/api/chat/stream")
+async def chat_stream(req: ChatRequest):
+    if req.orchestrated and agent.graph:
+        reply = agent.run_orchestrated(req.message, original_message=req.message)
+    else:
+        reply = agent.chat(req.message)
+
+    async def stream():
+        chunk_size = 24
+        text = str(reply)
+        for i in range(0, len(text), chunk_size):
+            payload = {"type": "chunk", "delta": text[i:i + chunk_size]}
+            yield f"{json.dumps(payload)}\n"
+            await asyncio.sleep(0)
+        yield f"{json.dumps({'type': 'done'})}\n"
+
+    return StreamingResponse(stream(), media_type="application/x-ndjson")
 
 @app.post("/api/chat/orchestrated")
 async def chat_orchestrated(req: ChatRequest):
@@ -264,6 +286,12 @@ async def resolution_resolve(req: ResolveRequest):
     # if no candidates provided, use recent task results
     candidates = req.candidates or [{"result": f"candidate {i}", "confidence": 0.6} for i in range(2)]
     return agent.resolver.resolve(candidates, goal=req.goal)
+
+@app.post("/api/runtime/shutdown")
+async def runtime_shutdown():
+    loop = asyncio.get_running_loop()
+    loop.call_later(0.2, lambda: os.kill(os.getpid(), signal.SIGTERM))
+    return {"status": "shutting_down"}
 
 if __name__ == "__main__":
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 8765

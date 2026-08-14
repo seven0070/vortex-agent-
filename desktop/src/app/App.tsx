@@ -7,20 +7,27 @@ import { GovernancePage, SovereignPage, ToolsPage } from '../pages/ControlPages'
 import { EvolutionPage } from '../pages/EvolutionPage';
 import { BenchmarksPage } from '../pages/BenchmarksPage';
 import { SettingsPage } from '../pages/SettingsPage';
-import { createApi } from '../services/api';
+import { createBackendBridge } from '../services/backendBridge';
 import { usePolling } from '../hooks/usePolling';
 import { useAppStore } from '../stores/AppStore';
 
 export function App() {
-  const { route, backendPort, setOnline } = useAppStore();
-  const api = useMemo(() => createApi(backendPort), [backendPort]);
+  const { route, backendPort, setOnline, setBackendStatus } = useAppStore();
+  const bridge = useMemo(() => createBackendBridge(backendPort), [backendPort]);
 
   usePolling(async () => {
     try {
-      const health = await api.health();
+      const [health, snapshot] = await Promise.all([bridge.api.health(), bridge.lifecycleSnapshot()]);
       setOnline(health?.status === 'healthy');
+      setBackendStatus(!!snapshot.backend_running, snapshot.last_error ?? null);
     } catch {
       setOnline(false);
+      try {
+        const snapshot = await bridge.lifecycleSnapshot();
+        setBackendStatus(!!snapshot.backend_running, snapshot.last_error ?? null);
+      } catch {
+        setBackendStatus(false, 'Backend unavailable');
+      }
     }
   }, 3000);
 
